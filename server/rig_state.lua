@@ -111,9 +111,15 @@ end
 ---@param tierKey string
 ---@return boolean
 function GpuFitsChassis(rig, tierKey)
-    local model = Config.RigModels[rig.rig_model]
     local tier = Config.GpuTiers[tierKey]
-    if not model or not tier then return false end
+    if not tier then return false end -- not a real GPU tier
+
+    -- Unknown chassis model (a legacy/custom rig_model no longer in config)
+    -- accepts anything -- this matches what toClientRig tells the client
+    -- (min 1 / max 999) so the UI and the server agree, and keeps old rigs
+    -- usable rather than silently un-upgradeable.
+    local model = Config.RigModels[rig.rig_model]
+    if not model then return true end
 
     local rank = tier.rank or 1
     local min = model.minGpuRank or 1

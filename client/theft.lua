@@ -8,12 +8,17 @@ function StartHack(rigId)
         return
     end
 
-    local success = RunMinigame('hack', difficultyOrReason)
-    lib.callback.await('anxious_btcmining:server:resolveHack', false, rigId, success)
+    -- The server generated and kept the real sequence; the minigame just
+    -- displays it and reports back the cells the player actually clicked. The
+    -- server re-checks those clicks -- the client's own idea of success is only
+    -- used for the local notification feel, never trusted for the outcome.
+    local _, input = RunMinigame('hack', difficultyOrReason)
+
+    local ok = lib.callback.await('anxious_btcmining:server:submitHack', false, rigId, input or {})
 
     lib.notify({
-        type = success and 'success' or 'error',
-        description = success and 'You got into the rig' or 'The hack failed',
+        type = ok and 'success' or 'error',
+        description = ok and 'You got into the rig' or 'The hack failed',
     })
 end
 

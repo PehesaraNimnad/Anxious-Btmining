@@ -77,7 +77,11 @@ function RateOk(source, action)
 
     local last = bucket[action]
     if last and (now - last) < window then
-        FlagExploit(source, 'rate-limit', ('%s interval=%dms min=%dms'):format(action, now - last, window))
+        -- Reject-and-ignore: a human double-clicking (or a UI firing twice) can
+        -- legitimately trip this, so it must NOT count toward the exploit-kick
+        -- threshold -- otherwise fast clicking could auto-kick an honest player.
+        -- Structural impossibilities (distance, bad args) are what FlagExploit
+        -- is for; a too-soon repeat is just dropped.
         return false
     end
 

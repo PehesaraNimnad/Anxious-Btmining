@@ -105,6 +105,10 @@ export interface SequenceDifficulty {
   length: number;
   showDelayMs: number;
   inputTimeoutMs: number;
+  // The sequence is generated SERVER-SIDE and sent down only to be displayed;
+  // the player's clicks are echoed back for the server to validate. Optional
+  // so the browser-preview path can still self-generate one locally.
+  sequence?: number[];
 }
 
 export interface MinigameRequest {

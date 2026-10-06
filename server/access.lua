@@ -91,7 +91,12 @@ lib.callback.register('anxious_btcmining:server:grantAccess', function(source, r
         return false, ('You can only share this rig with %d people'):format(MAX_SHARED)
     end
 
-    if not resolveName(targetCitizenid) then
+    -- Resolve the name once and reuse it -- resolveName hits GetOfflinePlayer
+    -- (a DB lookup) for offline targets, and the Log() call below would
+    -- otherwise run it a second time on every grant even with logging off,
+    -- since Lua builds the argument table before Log can short-circuit.
+    local targetName = resolveName(targetCitizenid)
+    if not targetName then
         return false, 'No character found for that citizen ID'
     end
 
@@ -109,7 +114,7 @@ lib.callback.register('anxious_btcmining:server:grantAccess', function(source, r
         fields = {
             { name = 'Owner', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
             { name = 'Rig', value = ('#%d'):format(rigId), inline = true },
-            { name = 'Granted to', value = ('%s (%s)'):format(resolveName(targetCitizenid) or '?', targetCitizenid), inline = true },
+            { name = 'Granted to', value = ('%s (%s)'):format(targetName, targetCitizenid), inline = true },
         },
     })
 

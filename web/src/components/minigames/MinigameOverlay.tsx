@@ -16,15 +16,24 @@ const INSTRUCTIONS: Record<MinigameRequest['kind'], string> = {
   hack: 'Watch the sequence, then repeat it exactly. One wrong node ends the attempt.',
 };
 
-export function MinigameOverlay({ request, onResult }: { request: MinigameRequest; onResult: (success: boolean) => void }) {
+export function MinigameOverlay({
+  request,
+  onResult,
+}: {
+  request: MinigameRequest;
+  onResult: (success: boolean, input?: number[]) => void;
+}) {
   const [result, setResult] = useState<'success' | 'failure' | null>(null);
   const reportedRef = useRef(false);
 
-  function handleResult(success: boolean) {
+  // `input` is only supplied by the hack (SequenceGame) -- it's the player's
+  // actual clicks, passed up so the server can validate them. Sweep games
+  // (install/extinguish) leave it undefined.
+  function handleResult(success: boolean, input?: number[]) {
     if (reportedRef.current) return;
     reportedRef.current = true;
     setResult(success ? 'success' : 'failure');
-    setTimeout(() => onResult(success), 700);
+    setTimeout(() => onResult(success, input), 700);
   }
 
   useEffect(() => {

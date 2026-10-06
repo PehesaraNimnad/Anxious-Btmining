@@ -195,7 +195,9 @@ function SendPoliceAlert(kind, rig, extra)
     if not def or not def.enabled then return end
 
     -- A hardened rig (higher security level) is louder when tampered with.
-    local chance = (def.chance or 1.0) + (extra.chanceBonus or 0)
+    -- Clamped to 1.0 so a high base chance + bonus just means "always", and
+    -- the roll below stays a real probability.
+    local chance = math.min(1.0, (def.chance or 1.0) + (extra.chanceBonus or 0))
     if math.random() > chance then return end
 
     local police = getOnDutyPolice()
