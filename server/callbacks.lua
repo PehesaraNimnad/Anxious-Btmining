@@ -14,6 +14,12 @@ local function toClientRig(rig, viewerCitizenid)
         chassisLabel = model and model.label or rig.rig_model,
         minGpuRank = model and model.minGpuRank or 1,
         maxGpuRank = model and model.maxGpuRank or 999,
+        -- Assembly state for the Assembly tab: the installed components (nil for
+        -- a grandfathered legacy rig), whether it's build-complete, and which
+        -- required categories are still missing.
+        components = rig.components,
+        assembled = RigIsAssembled(rig),
+        missingComponents = RigMissingComponents(rig),
         coords = rig.coords,
         heading = rig.heading,
         slots = rig.slots,
@@ -88,6 +94,11 @@ lib.callback.register('anxious_btcmining:server:installGpu', function(source, ri
     if type(rigSlot) ~= 'number' or type(inventorySlot) ~= 'number' then
         FlagExploit(source, 'bad-args', 'installGpu')
         return false
+    end
+    -- GPUs mount on the motherboard -- there has to be one in the rig first.
+    -- (A legacy rig has components == nil and is exempt.)
+    if rig.components and not (rig.components.motherboard and rig.components.motherboard.key) then
+        return false, 'Install a motherboard before adding GPUs'
     end
     if rig.slots[rigSlot] == nil then return false end -- out of range for this chassis
     if rig.slots[rigSlot] ~= false then return false, 'That slot is already occupied' end
@@ -215,6 +226,12 @@ lib.callback.register('anxious_btcmining:server:togglePower', function(source, r
     if not hasAccess(source, rig) then return false end
     if not GuardRigAction(source, rig, 'togglePower') then return false end
     if rig.status.onFire then return false, 'This rig is on fire' end
+
+    -- Can't power on a half-built rig -- it has to be assembled first. Powering
+    -- OFF is always allowed (e.g. an assembled rig you want to idle).
+    if not rig.power_state and not RigIsAssembled(rig) then
+        return false, 'Finish assembling this rig before powering it on'
+    end
 
     rig.power_state = not rig.power_state
     MarkDirty(rigId)

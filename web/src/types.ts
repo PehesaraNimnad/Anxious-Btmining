@@ -29,6 +29,11 @@ export interface Rig {
   xp: number;
   level: number;
   isOwner: boolean; // false for a shared-access viewer -- gates the Access tab
+  // Assembly state. `components` is undefined for a legacy (grandfathered) rig
+  // placed before the assembly system; otherwise a map of category -> slot.
+  components?: Record<string, ComponentSlotValue>;
+  assembled: boolean; // all required components present (true for legacy rigs)
+  missingComponents: string[]; // required categories still empty
 }
 
 export interface AccessEntry {
@@ -64,6 +69,38 @@ export interface OwnedGpu {
   durability: number;
 }
 
+// --- Build components / assembly ------------------------------------------
+
+export interface ComponentTierDef {
+  item: string;
+  label: string;
+  hashrateBonus?: number;
+  efficiency?: number;
+  wattage?: number;
+  coolingBonus?: number;
+}
+
+export interface ComponentCategoryDef {
+  label: string;
+  required: boolean;
+  minigame: 'sequence' | 'pins' | 'latch' | 'cables' | 'sweep';
+  tiers: Record<string, ComponentTierDef>;
+}
+
+export interface InstalledComponent {
+  key: string;
+}
+
+export type ComponentSlotValue = InstalledComponent | false;
+
+export interface OwnedComponent {
+  category: string;
+  key: string;
+  label: string;
+  item: string;
+  count: number;
+}
+
 export interface GpuTierConfig {
   item: string;
   label: string;
@@ -81,12 +118,15 @@ export interface RigData {
   skill: SkillProgress;
   shop: ShopEntry[];
   myGpus: OwnedGpu[];
+  myComponents: OwnedComponent[];
   access: AccessEntry[]; // [] for a shared-access (non-owner) viewer
   btcPrice: number;
   gpuTiers: Record<string, GpuTierConfig>;
+  componentDefs: Record<string, ComponentCategoryDef>;
+  componentOrder: string[];
 }
 
-export type MinigameKind = 'extinguish' | 'install' | 'hack';
+export type MinigameKind = 'extinguish' | 'install' | 'hack' | 'sequence' | 'pins' | 'latch' | 'cables';
 
 // "Coolant Purge" (fire) and "Socket Alignment" (GPU install) -- a marker
 // sweeps a track, the player strikes when it's inside the target zone.
@@ -111,8 +151,34 @@ export interface SequenceDifficulty {
   sequence?: number[];
 }
 
+// "Pin Align" (CPU) -- a pointer sweeps a ring; lock it while it's inside the
+// socket arc.
+export interface PinsDifficulty {
+  arcDeg: number; // width of the target arc, in degrees
+  speedMs: number; // time for the pointer to travel the full ring once
+}
+
+// "DIMM Latch" (RAM) -- clip the left then right latch, each as the slider
+// passes through its zone.
+export interface LatchDifficulty {
+  zoneWidthPct: number;
+  speedMs: number;
+}
+
+// "Power Routing" (PSU) -- match each colored lead to its socket.
+export interface CablesDifficulty {
+  pairs: number;
+}
+
+export type MinigameDifficulty =
+  | SweepDifficulty
+  | SequenceDifficulty
+  | PinsDifficulty
+  | LatchDifficulty
+  | CablesDifficulty;
+
 export interface MinigameRequest {
   requestId: number;
   kind: MinigameKind;
-  difficulty: SweepDifficulty | SequenceDifficulty;
+  difficulty: MinigameDifficulty;
 }

@@ -71,6 +71,90 @@ Config.GpuTiers = {
 }
 
 -- =========================================================================
+-- COMPONENTS / ASSEMBLY  (server/components.lua + Assembly tab)
+-- =========================================================================
+-- A placed rig chassis is now an EMPTY shell -- it won't mine until the owner
+-- physically assembles it from parts, one at a time, each with its own install
+-- minigame. The four `required` categories (motherboard, CPU, RAM, PSU) must
+-- all be present before the rig can power on; cooling is optional but lowers
+-- heat. GPUs are still handled by Config.GpuTiers (installed on the Assembly'd
+-- board) and provide the actual hashrate.
+--
+-- Every category -> minigame mapping is here, so each part feels different to
+-- fit:
+--   sequence  memorise + repeat a node pattern   (Simon-says grid)
+--   pins      rotate the part and seat it in the socket window (timing)
+--   latch     clip the two DIMM latches in rhythm (two-stage timing)
+--   cables    match each power lead to its socket  (wiring)
+--   sweep     the classic "strike inside the moving zone" timing bar
+--
+-- Server-authority note: installing a part you own into a rig you own isn't an
+-- economy exploit the way stealing is, so these assembly minigames are
+-- resolved client-side (skipping one just installs a part you already paid
+-- for). The SERVER still enforces everything that matters: you own the rig,
+-- you're next to it, you own the item, the category slot is empty, and the
+-- dependency order (a board before anything mounts on it). The theft hack
+-- stays fully server-validated (server/theft.lua).
+--
+-- Each tier entry maps to a non-? ox_inventory item (see
+-- docs/items/ox_inventory.txt). Add tiers freely; `item` must be unique.
+
+Config.ComponentOrder = { 'motherboard', 'cpu', 'ram', 'psu', 'cooling' }
+
+Config.Components = {
+    motherboard = {
+        label = 'Motherboard',
+        required = true,          -- rig can't run without it; GPUs mount on it
+        minigame = 'sequence',    -- memorise the standoff pattern
+        tiers = {
+            mobo_std = { item = 'comp_motherboard', label = 'ATX Motherboard' },
+        },
+    },
+
+    cpu = {
+        label = 'CPU',
+        required = true,
+        minigame = 'pins',        -- align the pins and seat it in the socket
+        tiers = {
+            -- hashrateBonus: flat hashrate added to the rig on top of the GPUs.
+            cpu_std = { item = 'comp_cpu', label = 'Mining CPU', hashrateBonus = 6 },
+        },
+    },
+
+    ram = {
+        label = 'RAM',
+        required = true,
+        minigame = 'latch',       -- clip both DIMM latches
+        tiers = {
+            -- efficiency: multiplier on total hashrate (1.0 = none).
+            ram_std = { item = 'comp_ram', label = '16GB RAM', efficiency = 1.08 },
+        },
+    },
+
+    psu = {
+        label = 'PSU',
+        required = true,
+        minigame = 'cables',      -- route the power leads to the right sockets
+        tiers = {
+            -- wattage is shown in the UI as the rig's power-delivery headroom;
+            -- informational in v1 (no hard throttle), tune/enforce as you like.
+            psu_std = { item = 'comp_psu', label = '850W PSU', wattage = 850 },
+        },
+    },
+
+    cooling = {
+        label = 'Cooling',
+        required = false,         -- optional; raises cooling capacity (less heat)
+        minigame = 'sweep',       -- balance the fan on the mount
+        tiers = {
+            -- coolingBonus adds to the chassis's baseCoolingCapacity in the
+            -- heat sim (server/rig_state.lua).
+            fan_std = { item = 'comp_fan', label = 'Cooling Fan', coolingBonus = 250 },
+        },
+    },
+}
+
+-- =========================================================================
 -- MINING SKILL (XP / levels -- unlocks GPU tiers)
 -- =========================================================================
 -- Skill/XP/level is tracked PER RIG, not per player -- a player who owns

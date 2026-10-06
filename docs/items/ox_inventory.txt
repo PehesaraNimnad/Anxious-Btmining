@@ -96,6 +96,18 @@
     },
 },
 
+-- ─── Build components (Config.Components) ────────────────────────────────────
+-- The parts a rig is assembled from, one slot/category at a time, each with
+-- its own install minigame. A placed chassis won't mine until motherboard +
+-- CPU + RAM + PSU are all installed; cooling is optional. GPUs (above) mount
+-- on the board and provide hashrate. These stack -- they carry no per-item
+-- metadata, unlike GPUs.
+['comp_motherboard'] = { label = 'ATX Motherboard', weight = 2500, stack = true, close = true, description = 'The board every other component mounts on. A rig needs one before anything else.' },
+['comp_cpu']         = { label = 'Mining CPU',      weight = 400,  stack = true, close = true, description = 'Processor. Adds a flat hashrate bump once seated in the board.' },
+['comp_ram']         = { label = '16GB RAM',        weight = 300,  stack = true, close = true, description = 'Memory module. Improves overall mining efficiency.' },
+['comp_psu']         = { label = '850W PSU',        weight = 3500, stack = true, close = true, description = 'Power supply. A rig can\'t run without one.' },
+['comp_fan']         = { label = 'Cooling Fan',     weight = 900,  stack = true, close = true, description = 'Optional case cooling. Lowers running temperature.' },
+
 -- ─── Power ──────────────────────────────────────────────────────────────────
 -- Prefixed (not just "generator_small"/"generator_fuel") -- those are
 -- generic enough names to collide with other resources' items on a real

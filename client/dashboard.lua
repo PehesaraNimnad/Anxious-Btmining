@@ -10,6 +10,7 @@ local function fetchAndSend(rigId)
     local skill = lib.callback.await('anxious_btcmining:server:getSkillProgress', false, rigId)
     local shop = lib.callback.await('anxious_btcmining:server:getGpuShop', false, rigId)
     local myGpus = lib.callback.await('anxious_btcmining:server:getMyGpus', false)
+    local myComponents = lib.callback.await('anxious_btcmining:server:getMyComponents', false)
     -- Server returns [] for a shared-access (non-owner) viewer -- cheap
     -- enough to always fetch, the NUI only renders the tab when rig.isOwner.
     local access = lib.callback.await('anxious_btcmining:server:getRigAccess', false, rigId)
@@ -21,9 +22,14 @@ local function fetchAndSend(rigId)
             skill = skill,
             shop = shop,
             myGpus = myGpus,
+            myComponents = myComponents,
             access = access,
             btcPrice = GlobalState.btc_price,
             gpuTiers = Config.GpuTiers,
+            -- Component catalog + assembly order, so the Assembly tab can render
+            -- the slots and know which minigame each part uses.
+            componentDefs = Config.Components,
+            componentOrder = Config.ComponentOrder,
         },
     })
 end
@@ -67,6 +73,18 @@ end)
 
 RegisterNUICallback('removeGpu', function(data, cb)
     local ok, result = lib.callback.await('anxious_btcmining:server:removeGpu', false, currentRigId, data.rigSlot)
+    if ok then fetchAndSend(currentRigId) end
+    cb({ ok = ok, message = not ok and result or nil })
+end)
+
+RegisterNUICallback('installComponent', function(data, cb)
+    local ok, result = lib.callback.await('anxious_btcmining:server:installComponent', false, currentRigId, data.category, data.tierKey)
+    if ok then fetchAndSend(currentRigId) end
+    cb({ ok = ok, message = not ok and result or nil })
+end)
+
+RegisterNUICallback('removeComponent', function(data, cb)
+    local ok, result = lib.callback.await('anxious_btcmining:server:removeComponent', false, currentRigId, data.category)
     if ok then fetchAndSend(currentRigId) end
     cb({ ok = ok, message = not ok and result or nil })
 end)

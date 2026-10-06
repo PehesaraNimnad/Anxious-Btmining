@@ -1,19 +1,37 @@
 import { useEffect, useRef, useState } from 'react';
 import { color, font, scanlines } from '../../theme/tokens';
-import type { MinigameRequest, SequenceDifficulty, SweepDifficulty } from '../../types';
+import type {
+  CablesDifficulty,
+  LatchDifficulty,
+  MinigameRequest,
+  PinsDifficulty,
+  SequenceDifficulty,
+  SweepDifficulty,
+} from '../../types';
 import { SweepGame } from './SweepGame';
 import { SequenceGame } from './SequenceGame';
+import { PinsGame } from './PinsGame';
+import { LatchGame } from './LatchGame';
+import { CablesGame } from './CablesGame';
 
 const TITLES: Record<MinigameRequest['kind'], string> = {
   extinguish: 'Coolant Purge',
   install: 'Socket Alignment',
   hack: 'Firewall Breach',
+  sequence: 'Standoff Map',
+  pins: 'Pin Align',
+  latch: 'DIMM Latch',
+  cables: 'Power Routing',
 };
 
 const INSTRUCTIONS: Record<MinigameRequest['kind'], string> = {
   extinguish: 'Strike the marker inside the zone to vent pressure before time runs out.',
   install: 'Strike the marker inside the zone to seat the card without cracking a pin.',
   hack: 'Watch the sequence, then repeat it exactly. One wrong node ends the attempt.',
+  sequence: 'Memorise the standoff pattern, then repeat it to seat the board.',
+  pins: 'Lock the pointer while it is inside the socket arc to seat the chip.',
+  latch: 'Clip the left then right latch as the marker passes through each zone.',
+  cables: 'Route each colored lead to its matching port. A wrong port shorts out.',
 };
 
 export function MinigameOverlay({
@@ -95,8 +113,14 @@ export function MinigameOverlay({
           >
             {result === 'success' ? 'SUCCESS' : 'FAILURE'}
           </div>
-        ) : request.kind === 'hack' ? (
+        ) : request.kind === 'hack' || request.kind === 'sequence' ? (
           <SequenceGame difficulty={request.difficulty as SequenceDifficulty} onResult={handleResult} />
+        ) : request.kind === 'pins' ? (
+          <PinsGame difficulty={request.difficulty as PinsDifficulty} onResult={handleResult} />
+        ) : request.kind === 'latch' ? (
+          <LatchGame difficulty={request.difficulty as LatchDifficulty} onResult={handleResult} />
+        ) : request.kind === 'cables' ? (
+          <CablesGame difficulty={request.difficulty as CablesDifficulty} onResult={handleResult} />
         ) : (
           <SweepGame difficulty={request.difficulty as SweepDifficulty} onResult={handleResult} />
         )}

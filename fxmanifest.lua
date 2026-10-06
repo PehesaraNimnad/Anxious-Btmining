@@ -51,6 +51,7 @@ server_scripts {
     'server/access.lua',
     'server/admin.lua',
     'server/callbacks.lua',
+    'server/components.lua',
 }
 
 files {

@@ -1,4 +1,4 @@
-import type { GpuTierConfig, RigData } from '../types';
+import type { ComponentCategoryDef, GpuTierConfig, RigData } from '../types';
 
 // Mirrors config.lua's Config.GpuTiers exactly (20 tiers on the ANX line) --
 // kept as one source array here so the mock gpuTiers/shop below can't drift
@@ -42,6 +42,16 @@ const shop = TIER_SOURCE.map(({ key, item: _item, maxCondition: _maxCondition, .
   fitsChassis: rest.rank >= MOCK_MIN_RANK && rest.rank <= MOCK_MAX_RANK,
 }));
 
+// Mirrors config.lua's Config.Components for browser preview.
+const componentOrder = ['motherboard', 'cpu', 'ram', 'psu', 'cooling'];
+const componentDefs: Record<string, ComponentCategoryDef> = {
+  motherboard: { label: 'Motherboard', required: true, minigame: 'sequence', tiers: { mobo_std: { item: 'comp_motherboard', label: 'ATX Motherboard' } } },
+  cpu: { label: 'CPU', required: true, minigame: 'pins', tiers: { cpu_std: { item: 'comp_cpu', label: 'Mining CPU', hashrateBonus: 6 } } },
+  ram: { label: 'RAM', required: true, minigame: 'latch', tiers: { ram_std: { item: 'comp_ram', label: '16GB RAM', efficiency: 1.08 } } },
+  psu: { label: 'PSU', required: true, minigame: 'cables', tiers: { psu_std: { item: 'comp_psu', label: '850W PSU', wattage: 850 } } },
+  cooling: { label: 'Cooling', required: false, minigame: 'sweep', tiers: { fan_std: { item: 'comp_fan', label: 'Cooling Fan', coolingBonus: 250 } } },
+};
+
 // Only used when running in a plain browser (isEnvBrowser()) for local dev
 // preview -- these numbers follow the real formulas in config.lua/skill.lua
 // (baseXp=200, growth=1.6) so the preview looks like a plausible mid-game
@@ -70,6 +80,17 @@ export const mockRigData: RigData = {
     xp: 5400,
     level: MOCK_LEVEL,
     isOwner: true,
+    // Core parts in, cooling slot still open -- shows both installed and
+    // empty states in the Assembly tab preview.
+    components: {
+      motherboard: { key: 'mobo_std' },
+      cpu: { key: 'cpu_std' },
+      ram: { key: 'ram_std' },
+      psu: { key: 'psu_std' },
+      cooling: false,
+    },
+    assembled: true,
+    missingComponents: [],
   },
   skill: {
     level: MOCK_LEVEL,
@@ -80,9 +101,12 @@ export const mockRigData: RigData = {
   },
   shop,
   myGpus: [{ inventorySlot: 7, tier: 'tier02', label: 'ANX-150', durability: 100 }],
+  myComponents: [{ category: 'cooling', key: 'fan_std', label: 'Cooling Fan', item: 'comp_fan', count: 1 }],
   access: [{ citizenid: 'ABC12345', name: 'Jane Doe' }],
   btcPrice: 47200,
   gpuTiers,
+  componentDefs,
+  componentOrder,
 };
 
 // A short synthetic price trail so the Sell tab's sparkline has something to
@@ -93,6 +117,8 @@ export const mockPriceHistory = [45800, 46100, 45600, 46700, 47500, 46900, 47200
 const actionEvents = new Set([
   'installGpu',
   'removeGpu',
+  'installComponent',
+  'removeComponent',
   'collectBtc',
   'togglePower',
   'buyGpu',

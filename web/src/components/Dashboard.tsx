@@ -4,11 +4,12 @@ import { isEnvBrowser } from '../utils/misc';
 import { mockPriceHistory } from '../data/mockData';
 import type { RigData } from '../types';
 import { OverviewTab } from './tabs/OverviewTab';
+import { AssemblyTab } from './tabs/AssemblyTab';
 import { GpuTab } from './tabs/GpuTab';
 import { SellTab } from './tabs/SellTab';
 import { AccessTab } from './tabs/AccessTab';
 
-const BASE_TABS = ['Overview', 'GPUs & Shop', 'Sell BTC'] as const;
+const BASE_TABS = ['Overview', 'Assembly', 'GPUs & Shop', 'Sell BTC'] as const;
 type Tab = (typeof BASE_TABS)[number] | 'Access';
 
 export function Dashboard({
@@ -105,6 +106,7 @@ export function Dashboard({
 
       <div style={{ padding: 16, maxHeight: '70vh', overflowY: 'auto' }}>
         {tab === 'Overview' && <OverviewTab data={data} onUpdate={onUpdate} />}
+        {tab === 'Assembly' && <AssemblyTab data={data} onUpdate={onUpdate} />}
         {tab === 'GPUs & Shop' && <GpuTab data={data} onUpdate={onUpdate} />}
         {tab === 'Sell BTC' && <SellTab btcPrice={data.btcPrice} priceHistory={priceHistory.current} />}
         {tab === 'Access' && data.rig.isOwner && <AccessTab data={data} onUpdate={onUpdate} />}
