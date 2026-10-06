@@ -18,6 +18,13 @@ local function getSecurityLevel(rig)
     return 1
 end
 
+-- A more hardened rig is noisier when touched: each security level past 1 adds
+-- 15% to the dispatch chance, so a locked-down rig is likelier to raise a
+-- police raid than an undefended one. Capped so it can't exceed 1.0 upstream.
+local function dispatchBonus(rig)
+    return math.max(0, (getSecurityLevel(rig) - 1)) * 0.15
+end
+
 ---@param source number
 ---@param rigId integer
 lib.callback.register('anxious_btcmining:server:requestHack', function(source, rigId)
@@ -25,6 +32,11 @@ lib.callback.register('anxious_btcmining:server:requestHack', function(source, r
 
     local rig = GetRig(rigId)
     if not rig then return false end
+
+    -- A thief has to be physically at the rig, and can't spam the request --
+    -- same server-side guards as every authorized action.
+    if not RateOk(source, 'requestHack') then return false end
+    if not RequireNearRig(source, rig, 'requestHack') then return false end
 
     local citizenid = GetCitizenId(source)
     if HasRigAccess(rig, citizenid) then
@@ -52,6 +64,20 @@ lib.callback.register('anxious_btcmining:server:requestHack', function(source, r
 
     InProgress[rigId] = source
     AttemptsToday[rigId] = (AttemptsToday[rigId] or 0) + 1
+
+    -- The moment a break-in starts can optionally raise a (low-chance) alert,
+    -- so a sharp dispatcher sometimes gets a head start before the hack even
+    -- resolves. Off by default (see Config.Dispatch.alerts.hackStarted).
+    SendPoliceAlert('hackStarted', rig, { chanceBonus = dispatchBonus(rig) })
+
+    Log('theft', {
+        title = 'Hack Started',
+        severity = 'warn',
+        fields = {
+            { name = 'Thief', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+            { name = 'Rig', value = ('#%d (owner %s)'):format(rigId, rig.citizenid), inline = true },
+        },
+    })
 
     local level = math.min(getSecurityLevel(rig), #Config.Theft.difficulty)
     return true, Config.Theft.difficulty[level]
@@ -95,17 +121,40 @@ lib.callback.register('anxious_btcmining:server:resolveHack', function(source, r
             end
         end
 
+        -- A successful drain is the loudest event -- raise a crypto-theft raid.
+        SendPoliceAlert('hackSuccess', rig, { chanceBonus = dispatchBonus(rig) })
+
+        Log('theft', {
+            title = 'Rig Drained',
+            severity = 'danger',
+            fields = {
+                { name = 'Thief', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+                { name = 'Rig', value = ('#%d (owner %s)'):format(rigId, rig.citizenid), inline = true },
+                { name = 'Stolen', value = ('%d micro-BTC'):format(stolenMicro), inline = true },
+            },
+        })
+
         return true
     end
 
     Cooldowns[rigId] = os.time() + math.floor(Config.Theft.failCooldownMs / 1000)
 
+    -- A tripped alarm raises a (higher-chance) raid, and still fires the
+    -- original generic hook for anyone who wired their own dispatch to it.
+    SendPoliceAlert('hackFailed', rig, { chanceBonus = dispatchBonus(rig) })
+
     if Config.Theft.alertPoliceOnFail then
-        -- Intentionally left as a generic hook rather than a dispatch call --
-        -- wire this to your own dispatch resource, it varies too much
-        -- between servers to bake in one implementation here.
         TriggerEvent('anxious_btcmining:hackFailedNearby', rig.coords)
     end
+
+    Log('theft', {
+        title = 'Hack Failed',
+        severity = 'warn',
+        fields = {
+            { name = 'Thief', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+            { name = 'Rig', value = ('#%d (owner %s)'):format(rigId, rig.citizenid), inline = true },
+        },
+    })
 
     return false
 end)
@@ -117,6 +166,9 @@ lib.callback.register('anxious_btcmining:server:stealGpu', function(source, rigI
 
     local rig = GetRig(rigId)
     if not rig then return false end
+
+    if not RateOk(source, 'stealGpu') then return false end
+    if not RequireNearRig(source, rig, 'stealGpu') then return false end
 
     local citizenid = GetCitizenId(source)
     if HasRigAccess(rig, citizenid) then return false end
@@ -139,6 +191,19 @@ lib.callback.register('anxious_btcmining:server:stealGpu', function(source, rigI
     MarkDirty(rigId)
 
     exports.ox_inventory:AddItem(source, tier.item, 1, { durability = durability })
+
+    -- Physically ripping hardware out is always worth a dispatch (chance 1.0).
+    SendPoliceAlert('gpuTheft', rig, { chanceBonus = dispatchBonus(rig) })
+
+    Log('theft', {
+        title = 'GPU Stolen',
+        severity = 'danger',
+        fields = {
+            { name = 'Thief', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+            { name = 'Rig', value = ('#%d (owner %s)'):format(rigId, rig.citizenid), inline = true },
+            { name = 'GPU', value = ('%s (%.0f%%)'):format(tier.label, durability), inline = true },
+        },
+    })
 
     return true
 end)

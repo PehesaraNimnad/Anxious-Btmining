@@ -24,6 +24,7 @@ client_scripts {
     'client/theft.lua',
     'client/fire.lua',
     'client/dashboard.lua',
+    'client/dispatch.lua',
 }
 
 server_scripts {
@@ -31,6 +32,11 @@ server_scripts {
     'server/init.lua',
     'server/migrations.lua',
     'server/rig_state.lua',
+    -- Loaded before the gameplay callbacks so their Log()/Guard*()/SendPoliceAlert()
+    -- globals exist as soon as those files register their handlers.
+    'server/logs.lua',
+    'server/security.lua',
+    'server/dispatch.lua',
     'server/skill.lua',
     'server/main.lua',
     'server/btc_market.lua',

@@ -25,6 +25,17 @@ RegisterCommand('btcgive', function(source, args)
         added and ('Gave %dx %s'):format(count, item) or 'Failed to add item -- inventory full?',
         added and 'success' or 'error'
     )
+
+    if added then
+        Log('admin', {
+            title = 'Admin: Item Given',
+            severity = 'admin',
+            fields = {
+                { name = 'Admin', value = ('%s (%s)'):format(GetPlayerName(source) or 'console', source), inline = true },
+                { name = 'Item', value = ('%dx %s'):format(count, item), inline = true },
+            },
+        })
+    end
 end, true)
 
 -- Forces a rig straight to on-fire (bypassing the normal heat/meltdown roll)
@@ -58,6 +69,15 @@ RegisterCommand('btcfire', function(source, args)
     BroadcastRigSummaries(-1)
 
     exports.qbx_core:Notify(source, ('Rig #%d is now on fire'):format(rigId), 'success')
+
+    Log('admin', {
+        title = 'Admin: Rig Set On Fire',
+        severity = 'admin',
+        fields = {
+            { name = 'Admin', value = ('%s (%s)'):format(GetPlayerName(source) or 'console', source), inline = true },
+            { name = 'Rig', value = ('#%d (owner %s)'):format(rigId, rig.citizenid), inline = true },
+        },
+    })
 end, true)
 
 -- Lists every rig currently in memory (id/owner/status) to the server

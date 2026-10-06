@@ -109,6 +109,7 @@ lib.callback.register('anxious_btcmining:server:buyGpu', function(source, rigId,
 
     local rig = GetRig(rigId)
     if not hasAccess(source, rig) then return false end
+    if not GuardRigAction(source, rig, 'buyGpu') then return false end
 
     if rig.level < tier.requiredLevel then
         return false, ('This rig needs to be level %d first'):format(tier.requiredLevel)
@@ -119,10 +120,29 @@ lib.callback.register('anxious_btcmining:server:buyGpu', function(source, rigId,
         return false, 'Not enough money'
     end
 
-    local added = exports.ox_inventory:AddItem(source, tier.item, 1, { durability = tier.maxCondition })
-    if not added then return false, 'Your inventory is full' end
+    -- Remove the money FIRST, then add the item -- if the inventory is full the
+    -- purchase is refunded. Doing it this way (rather than add-then-charge)
+    -- means a client that forces an inventory-full state can never walk away
+    -- with the GPU unpaid.
+    if not player.Functions.RemoveMoney(Config.Currency, tier.price, 'btcmining-gpu-purchase') then
+        return false, 'Not enough money'
+    end
 
-    player.Functions.RemoveMoney(Config.Currency, tier.price, 'btcmining-gpu-purchase')
+    local added = exports.ox_inventory:AddItem(source, tier.item, 1, { durability = tier.maxCondition })
+    if not added then
+        player.Functions.AddMoney(Config.Currency, tier.price, 'btcmining-gpu-refund')
+        return false, 'Your inventory is full'
+    end
+
+    Log('hardware', {
+        title = 'GPU Purchased',
+        severity = 'info',
+        fields = {
+            { name = 'Player', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+            { name = 'GPU', value = tier.label, inline = true },
+            { name = 'Price', value = ('$%d'):format(tier.price), inline = true },
+        },
+    })
 
     return true
 end)
