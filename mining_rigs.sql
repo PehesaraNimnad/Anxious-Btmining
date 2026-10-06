@@ -20,6 +20,12 @@ CREATE TABLE IF NOT EXISTS `mining_rigs` (
   -- GPUs, collect, toggle power, buy GPUs), but only the owner can grant or
   -- revoke it. See server/access.lua.
   `shared_access` JSON NOT NULL DEFAULT ('[]'),
+  -- JSON object of installed build components, keyed by category
+  -- (motherboard/cpu/ram/psu/cooling), e.g. {"motherboard":{"key":"mobo_std"},
+  -- "cpu":false,...}. NULL means a legacy rig placed before the assembly
+  -- system existed -- those are grandfathered in as already-assembled. See
+  -- server/components.lua and server/rig_state.lua's RigIsAssembled.
+  `components` JSON NULL DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
   KEY `idx_owner` (`citizenid`),

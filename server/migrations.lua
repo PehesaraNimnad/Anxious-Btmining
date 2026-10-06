@@ -21,4 +21,15 @@ function RunMigrations()
     if not ok then
         print(('^1[anxious_btcmining] Failed to auto-create `mining_rigs` -- import mining_rigs.sql manually. Error: %s^7'):format(err))
     end
+
+    -- Additive migration for servers that already have the table from an
+    -- earlier version: add the `components` column if it's missing. MariaDB
+    -- supports IF NOT EXISTS here; wrapped in pcall so an older engine that
+    -- doesn't (or a column that already exists) never hard-errors the startup.
+    local okAlter, errAlter = pcall(function()
+        MySQL.query.await('ALTER TABLE `mining_rigs` ADD COLUMN IF NOT EXISTS `components` JSON NULL DEFAULT NULL')
+    end)
+    if not okAlter then
+        print(('^3[anxious_btcmining] Could not add `components` column (may already exist): %s^7'):format(errAlter))
+    end
 end

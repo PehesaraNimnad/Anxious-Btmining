@@ -32,9 +32,11 @@ export function App() {
     setData((prev) => (prev ? { ...prev, ...patch } : prev));
   }
 
-  function resolveMinigame(success: boolean) {
+  function resolveMinigame(success: boolean, input?: number[]) {
     if (!minigame) return;
-    fetchNui('minigameResult', { requestId: minigame.requestId, success });
+    // `input` (the player's clicks) rides along for the hack minigame so the
+    // server can validate the attempt itself rather than trusting `success`.
+    fetchNui('minigameResult', { requestId: minigame.requestId, success, input });
     setMinigame(null);
   }
 

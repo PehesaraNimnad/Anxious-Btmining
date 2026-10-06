@@ -18,6 +18,13 @@ local function getSecurityLevel(rig)
     return 1
 end
 
+-- A more hardened rig is noisier when touched: each security level past 1 adds
+-- 15% to the dispatch chance, so a locked-down rig is likelier to raise a
+-- police raid than an undefended one. Capped so it can't exceed 1.0 upstream.
+local function dispatchBonus(rig)
+    return math.max(0, (getSecurityLevel(rig) - 1)) * 0.15
+end
+
 ---@param source number
 ---@param rigId integer
 lib.callback.register('anxious_btcmining:server:requestHack', function(source, rigId)
@@ -25,6 +32,11 @@ lib.callback.register('anxious_btcmining:server:requestHack', function(source, r
 
     local rig = GetRig(rigId)
     if not rig then return false end
+
+    -- A thief has to be physically at the rig, and can't spam the request --
+    -- same server-side guards as every authorized action.
+    if not RateOk(source, 'requestHack') then return false end
+    if not RequireNearRig(source, rig, 'requestHack') then return false end
 
     local citizenid = GetCitizenId(source)
     if HasRigAccess(rig, citizenid) then
@@ -50,26 +62,85 @@ lib.callback.register('anxious_btcmining:server:requestHack', function(source, r
         end
     end
 
-    InProgress[rigId] = source
     AttemptsToday[rigId] = (AttemptsToday[rigId] or 0) + 1
 
+    -- Generate the "Firewall Breach" sequence HERE, on the server, and keep it
+    -- -- the client is sent the sequence only so it can display it, and must
+    -- echo the player's actual clicks back (submitHack) to be checked against
+    -- this stored copy. The server, not the client, decides success. This is
+    -- what closes the "just call resolve(true) and skip the minigame" hole:
+    -- a crafted submit now has to reproduce a server-chosen sequence, not send
+    -- a boolean.
     local level = math.min(getSecurityLevel(rig), #Config.Theft.difficulty)
-    return true, Config.Theft.difficulty[level]
+    local diff = Config.Theft.difficulty[level]
+
+    local sequence = {}
+    local last = -1
+    for i = 1, diff.length do
+        local n = math.random(0, diff.gridSize - 1)
+        while n == last and diff.gridSize > 1 do
+            n = math.random(0, diff.gridSize - 1)
+        end
+        sequence[i] = n
+        last = n
+    end
+
+    InProgress[rigId] = { source = source, sequence = sequence, startedAt = os.time() }
+
+    -- The moment a break-in starts can optionally raise a (low-chance) alert,
+    -- so a sharp dispatcher sometimes gets a head start before the hack even
+    -- resolves. Off by default (see Config.Dispatch.alerts.hackStarted).
+    SendPoliceAlert('hackStarted', rig, { chanceBonus = dispatchBonus(rig) })
+
+    Log('theft', {
+        title = 'Hack Started',
+        severity = 'warn',
+        fields = {
+            { name = 'Thief', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+            { name = 'Rig', value = ('#%d (owner %s)'):format(rigId, rig.citizenid), inline = true },
+        },
+    })
+
+    -- Copy the difficulty (never hand out a reference to the config table) and
+    -- attach the sequence the client must display.
+    return true, {
+        gridSize = diff.gridSize,
+        length = diff.length,
+        showDelayMs = diff.showDelayMs,
+        inputTimeoutMs = diff.inputTimeoutMs,
+        sequence = sequence,
+    }
 end)
 
 ---@param source number
 ---@param rigId integer
----@param success boolean
-lib.callback.register('anxious_btcmining:server:resolveHack', function(source, rigId, success)
+---@param input number[] -- the cells the player actually clicked, in order
+lib.callback.register('anxious_btcmining:server:submitHack', function(source, rigId, input)
     local rig = GetRig(rigId)
 
-    -- Always clear the lock, even if the rig vanished mid-attempt.
-    if InProgress[rigId] ~= source then
+    local attempt = InProgress[rigId]
+    -- Must be the same player who started this attempt (no hijacking someone
+    -- else's in-progress hack, no submitting without ever calling requestHack).
+    if not attempt or attempt.source ~= source then
         return false
     end
+    -- Always clear the lock, even if the rig vanished or the submit is bogus.
     InProgress[rigId] = nil
 
     if not rig then return false end
+
+    -- SUCCESS IS DECIDED HERE, not by the client: the submitted input must
+    -- reproduce the sequence the server generated in requestHack, exactly and
+    -- in order. A missing/short/wrong submission simply fails.
+    local success = type(input) == 'table' and #input == #attempt.sequence
+    if success then
+        for i = 1, #attempt.sequence do
+            if input[i] ~= attempt.sequence[i] then
+                success = false
+                break
+            end
+        end
+    end
 
     if success then
         local fraction = Config.Theft.stealFraction.min +
@@ -95,17 +166,40 @@ lib.callback.register('anxious_btcmining:server:resolveHack', function(source, r
             end
         end
 
+        -- A successful drain is the loudest event -- raise a crypto-theft raid.
+        SendPoliceAlert('hackSuccess', rig, { chanceBonus = dispatchBonus(rig) })
+
+        Log('theft', {
+            title = 'Rig Drained',
+            severity = 'danger',
+            fields = {
+                { name = 'Thief', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+                { name = 'Rig', value = ('#%d (owner %s)'):format(rigId, rig.citizenid), inline = true },
+                { name = 'Stolen', value = ('%d micro-BTC'):format(stolenMicro), inline = true },
+            },
+        })
+
         return true
     end
 
     Cooldowns[rigId] = os.time() + math.floor(Config.Theft.failCooldownMs / 1000)
 
+    -- A tripped alarm raises a (higher-chance) raid, and still fires the
+    -- original generic hook for anyone who wired their own dispatch to it.
+    SendPoliceAlert('hackFailed', rig, { chanceBonus = dispatchBonus(rig) })
+
     if Config.Theft.alertPoliceOnFail then
-        -- Intentionally left as a generic hook rather than a dispatch call --
-        -- wire this to your own dispatch resource, it varies too much
-        -- between servers to bake in one implementation here.
         TriggerEvent('anxious_btcmining:hackFailedNearby', rig.coords)
     end
+
+    Log('theft', {
+        title = 'Hack Failed',
+        severity = 'warn',
+        fields = {
+            { name = 'Thief', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+            { name = 'Rig', value = ('#%d (owner %s)'):format(rigId, rig.citizenid), inline = true },
+        },
+    })
 
     return false
 end)
@@ -117,6 +211,9 @@ lib.callback.register('anxious_btcmining:server:stealGpu', function(source, rigI
 
     local rig = GetRig(rigId)
     if not rig then return false end
+
+    if not RateOk(source, 'stealGpu') then return false end
+    if not RequireNearRig(source, rig, 'stealGpu') then return false end
 
     local citizenid = GetCitizenId(source)
     if HasRigAccess(rig, citizenid) then return false end
@@ -139,6 +236,19 @@ lib.callback.register('anxious_btcmining:server:stealGpu', function(source, rigI
     MarkDirty(rigId)
 
     exports.ox_inventory:AddItem(source, tier.item, 1, { durability = durability })
+
+    -- Physically ripping hardware out is always worth a dispatch (chance 1.0).
+    SendPoliceAlert('gpuTheft', rig, { chanceBonus = dispatchBonus(rig) })
+
+    Log('theft', {
+        title = 'GPU Stolen',
+        severity = 'danger',
+        fields = {
+            { name = 'Thief', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+            { name = 'Rig', value = ('#%d (owner %s)'):format(rigId, rig.citizenid), inline = true },
+            { name = 'GPU', value = ('%s (%.0f%%)'):format(tier.label, durability), inline = true },
+        },
+    })
 
     return true
 end)

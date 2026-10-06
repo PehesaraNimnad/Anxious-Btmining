@@ -80,12 +80,17 @@ lib.callback.register('anxious_btcmining:server:getGpuShop', function(source, ri
         out[#out + 1] = {
             key = key,
             label = tier.label,
+            rank = tier.rank or 1,
             price = tier.price,
             requiredLevel = tier.requiredLevel,
             hashrate = tier.hashrate,
             powerDraw = tier.powerDraw,
             heatPerSecond = tier.heatPerSecond,
             unlocked = rig.level >= tier.requiredLevel,
+            -- Whether this GPU fits the rig's chassis rank window -- the
+            -- dashboard disables the Buy button for cards that don't fit, and
+            -- buyGpu below enforces the same thing server-side.
+            fitsChassis = GpuFitsChassis(rig, key),
         }
     end
 
@@ -109,9 +114,16 @@ lib.callback.register('anxious_btcmining:server:buyGpu', function(source, rigId,
 
     local rig = GetRig(rigId)
     if not hasAccess(source, rig) then return false end
+    if not GuardRigAction(source, rig, 'buyGpu') then return false end
 
     if rig.level < tier.requiredLevel then
         return false, ('This rig needs to be level %d first'):format(tier.requiredLevel)
+    end
+
+    -- Can't buy a GPU this chassis can't physically run (config.lua's
+    -- Config.RigModels min/maxGpuRank). Same gate as install.
+    if not GpuFitsChassis(rig, tierKey) then
+        return false, 'This chassis can\'t run that GPU'
     end
 
     local player = exports.qbx_core:GetPlayer(source)
@@ -119,10 +131,29 @@ lib.callback.register('anxious_btcmining:server:buyGpu', function(source, rigId,
         return false, 'Not enough money'
     end
 
-    local added = exports.ox_inventory:AddItem(source, tier.item, 1, { durability = tier.maxCondition })
-    if not added then return false, 'Your inventory is full' end
+    -- Remove the money FIRST, then add the item -- if the inventory is full the
+    -- purchase is refunded. Doing it this way (rather than add-then-charge)
+    -- means a client that forces an inventory-full state can never walk away
+    -- with the GPU unpaid.
+    if not player.Functions.RemoveMoney(Config.Currency, tier.price, 'btcmining-gpu-purchase') then
+        return false, 'Not enough money'
+    end
 
-    player.Functions.RemoveMoney(Config.Currency, tier.price, 'btcmining-gpu-purchase')
+    local added = exports.ox_inventory:AddItem(source, tier.item, 1, { durability = tier.maxCondition })
+    if not added then
+        player.Functions.AddMoney(Config.Currency, tier.price, 'btcmining-gpu-refund')
+        return false, 'Your inventory is full'
+    end
+
+    Log('hardware', {
+        title = 'GPU Purchased',
+        severity = 'info',
+        fields = {
+            { name = 'Player', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+            { name = 'GPU', value = tier.label, inline = true },
+            { name = 'Price', value = ('$%d'):format(tier.price), inline = true },
+        },
+    })
 
     return true
 end)

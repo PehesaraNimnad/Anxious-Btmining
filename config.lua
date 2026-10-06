@@ -42,27 +42,116 @@ Config.MicroBtcPerItem = 1000000
 -- chase. Stats compound roughly geometrically tier-to-tier (~12-25% per
 -- step depending on the stat) rather than a flat curve, so the jump from
 -- a tier01 to a tier20 rig feels dramatic rather than incremental.
+-- `rank` is the 1-20 position on the line, used by Config.RigModels' chassis
+-- compatibility window (minGpuRank/maxGpuRank) -- a chassis only accepts GPUs
+-- whose rank falls inside its window, so a desktop can't run an enterprise
+-- card and a data-centre node isn't wasted on entry-level silicon. Keep rank
+-- contiguous and unique if you add/re-order tiers.
 Config.GpuTiers = {
-    tier01 = { item = 'gpu_tier01', label = 'ANX-100',      hashrate = 8,   powerDraw = 90,  heatPerSecond = 0.60, price = 1800,  maxCondition = 100, requiredLevel = 1 },
-    tier02 = { item = 'gpu_tier02', label = 'ANX-150',      hashrate = 10,  powerDraw = 100, heatPerSecond = 0.70, price = 2200,  maxCondition = 100, requiredLevel = 1 },
-    tier03 = { item = 'gpu_tier03', label = 'ANX-200',      hashrate = 12,  powerDraw = 115, heatPerSecond = 0.80, price = 2700,  maxCondition = 100, requiredLevel = 2 },
-    tier04 = { item = 'gpu_tier04', label = 'ANX-250',      hashrate = 14,  powerDraw = 130, heatPerSecond = 0.85, price = 3300,  maxCondition = 100, requiredLevel = 3 },
-    tier05 = { item = 'gpu_tier05', label = 'ANX-300',      hashrate = 17,  powerDraw = 150, heatPerSecond = 0.95, price = 4000,  maxCondition = 100, requiredLevel = 4 },
-    tier06 = { item = 'gpu_tier06', label = 'ANX-400',      hashrate = 20,  powerDraw = 170, heatPerSecond = 1.05, price = 5000,  maxCondition = 100, requiredLevel = 5 },
-    tier07 = { item = 'gpu_tier07', label = 'ANX-500',      hashrate = 24,  powerDraw = 190, heatPerSecond = 1.20, price = 6100,  maxCondition = 100, requiredLevel = 6 },
-    tier08 = { item = 'gpu_tier08', label = 'ANX-600',      hashrate = 29,  powerDraw = 215, heatPerSecond = 1.30, price = 7500,  maxCondition = 100, requiredLevel = 7 },
-    tier09 = { item = 'gpu_tier09', label = 'ANX-700',      hashrate = 35,  powerDraw = 245, heatPerSecond = 1.45, price = 9100,  maxCondition = 100, requiredLevel = 8 },
-    tier10 = { item = 'gpu_tier10', label = 'ANX-800',      hashrate = 41,  powerDraw = 275, heatPerSecond = 1.60, price = 11200, maxCondition = 100, requiredLevel = 9 },
-    tier11 = { item = 'gpu_tier11', label = 'ANX-900',      hashrate = 50,  powerDraw = 310, heatPerSecond = 1.80, price = 13700, maxCondition = 100, requiredLevel = 10 },
-    tier12 = { item = 'gpu_tier12', label = 'ANX-1000',     hashrate = 60,  powerDraw = 350, heatPerSecond = 2.00, price = 16800, maxCondition = 100, requiredLevel = 11 },
-    tier13 = { item = 'gpu_tier13', label = 'ANX-1200',     hashrate = 72,  powerDraw = 400, heatPerSecond = 2.25, price = 20500, maxCondition = 100, requiredLevel = 13 },
-    tier14 = { item = 'gpu_tier14', label = 'ANX-1400',     hashrate = 86,  powerDraw = 450, heatPerSecond = 2.50, price = 25200, maxCondition = 100, requiredLevel = 15 },
-    tier15 = { item = 'gpu_tier15', label = 'ANX-1600',     hashrate = 103, powerDraw = 510, heatPerSecond = 2.80, price = 30800, maxCondition = 100, requiredLevel = 16 },
-    tier16 = { item = 'gpu_tier16', label = 'ANX-1800',     hashrate = 124, powerDraw = 580, heatPerSecond = 3.10, price = 37700, maxCondition = 100, requiredLevel = 18 },
-    tier17 = { item = 'gpu_tier17', label = 'ANX-2000',     hashrate = 148, powerDraw = 650, heatPerSecond = 3.50, price = 46200, maxCondition = 100, requiredLevel = 19 },
-    tier18 = { item = 'gpu_tier18', label = 'ANX-2200',     hashrate = 178, powerDraw = 740, heatPerSecond = 3.90, price = 56600, maxCondition = 100, requiredLevel = 21 },
-    tier19 = { item = 'gpu_tier19', label = 'ANX-2400',     hashrate = 214, powerDraw = 840, heatPerSecond = 4.30, price = 69400, maxCondition = 100, requiredLevel = 23 },
-    tier20 = { item = 'gpu_tier20', label = 'ANX-2600 Ti',  hashrate = 256, powerDraw = 950, heatPerSecond = 4.80, price = 85000, maxCondition = 100, requiredLevel = 25 },
+    tier01 = { item = 'gpu_tier01', label = 'ANX-100',      rank = 1,  hashrate = 8,   powerDraw = 90,  heatPerSecond = 0.60, price = 1800,  maxCondition = 100, requiredLevel = 1 },
+    tier02 = { item = 'gpu_tier02', label = 'ANX-150',      rank = 2,  hashrate = 10,  powerDraw = 100, heatPerSecond = 0.70, price = 2200,  maxCondition = 100, requiredLevel = 1 },
+    tier03 = { item = 'gpu_tier03', label = 'ANX-200',      rank = 3,  hashrate = 12,  powerDraw = 115, heatPerSecond = 0.80, price = 2700,  maxCondition = 100, requiredLevel = 2 },
+    tier04 = { item = 'gpu_tier04', label = 'ANX-250',      rank = 4,  hashrate = 14,  powerDraw = 130, heatPerSecond = 0.85, price = 3300,  maxCondition = 100, requiredLevel = 3 },
+    tier05 = { item = 'gpu_tier05', label = 'ANX-300',      rank = 5,  hashrate = 17,  powerDraw = 150, heatPerSecond = 0.95, price = 4000,  maxCondition = 100, requiredLevel = 4 },
+    tier06 = { item = 'gpu_tier06', label = 'ANX-400',      rank = 6,  hashrate = 20,  powerDraw = 170, heatPerSecond = 1.05, price = 5000,  maxCondition = 100, requiredLevel = 5 },
+    tier07 = { item = 'gpu_tier07', label = 'ANX-500',      rank = 7,  hashrate = 24,  powerDraw = 190, heatPerSecond = 1.20, price = 6100,  maxCondition = 100, requiredLevel = 6 },
+    tier08 = { item = 'gpu_tier08', label = 'ANX-600',      rank = 8,  hashrate = 29,  powerDraw = 215, heatPerSecond = 1.30, price = 7500,  maxCondition = 100, requiredLevel = 7 },
+    tier09 = { item = 'gpu_tier09', label = 'ANX-700',      rank = 9,  hashrate = 35,  powerDraw = 245, heatPerSecond = 1.45, price = 9100,  maxCondition = 100, requiredLevel = 8 },
+    tier10 = { item = 'gpu_tier10', label = 'ANX-800',      rank = 10, hashrate = 41,  powerDraw = 275, heatPerSecond = 1.60, price = 11200, maxCondition = 100, requiredLevel = 9 },
+    tier11 = { item = 'gpu_tier11', label = 'ANX-900',      rank = 11, hashrate = 50,  powerDraw = 310, heatPerSecond = 1.80, price = 13700, maxCondition = 100, requiredLevel = 10 },
+    tier12 = { item = 'gpu_tier12', label = 'ANX-1000',     rank = 12, hashrate = 60,  powerDraw = 350, heatPerSecond = 2.00, price = 16800, maxCondition = 100, requiredLevel = 11 },
+    tier13 = { item = 'gpu_tier13', label = 'ANX-1200',     rank = 13, hashrate = 72,  powerDraw = 400, heatPerSecond = 2.25, price = 20500, maxCondition = 100, requiredLevel = 13 },
+    tier14 = { item = 'gpu_tier14', label = 'ANX-1400',     rank = 14, hashrate = 86,  powerDraw = 450, heatPerSecond = 2.50, price = 25200, maxCondition = 100, requiredLevel = 15 },
+    tier15 = { item = 'gpu_tier15', label = 'ANX-1600',     rank = 15, hashrate = 103, powerDraw = 510, heatPerSecond = 2.80, price = 30800, maxCondition = 100, requiredLevel = 16 },
+    tier16 = { item = 'gpu_tier16', label = 'ANX-1800',     rank = 16, hashrate = 124, powerDraw = 580, heatPerSecond = 3.10, price = 37700, maxCondition = 100, requiredLevel = 18 },
+    tier17 = { item = 'gpu_tier17', label = 'ANX-2000',     rank = 17, hashrate = 148, powerDraw = 650, heatPerSecond = 3.50, price = 46200, maxCondition = 100, requiredLevel = 19 },
+    tier18 = { item = 'gpu_tier18', label = 'ANX-2200',     rank = 18, hashrate = 178, powerDraw = 740, heatPerSecond = 3.90, price = 56600, maxCondition = 100, requiredLevel = 21 },
+    tier19 = { item = 'gpu_tier19', label = 'ANX-2400',     rank = 19, hashrate = 214, powerDraw = 840, heatPerSecond = 4.30, price = 69400, maxCondition = 100, requiredLevel = 23 },
+    tier20 = { item = 'gpu_tier20', label = 'ANX-2600 Ti',  rank = 20, hashrate = 256, powerDraw = 950, heatPerSecond = 4.80, price = 85000, maxCondition = 100, requiredLevel = 25 },
+}
+
+-- =========================================================================
+-- COMPONENTS / ASSEMBLY  (server/components.lua + Assembly tab)
+-- =========================================================================
+-- A placed rig chassis is now an EMPTY shell -- it won't mine until the owner
+-- physically assembles it from parts, one at a time, each with its own install
+-- minigame. The four `required` categories (motherboard, CPU, RAM, PSU) must
+-- all be present before the rig can power on; cooling is optional but lowers
+-- heat. GPUs are still handled by Config.GpuTiers (installed on the Assembly'd
+-- board) and provide the actual hashrate.
+--
+-- Every category -> minigame mapping is here, so each part feels different to
+-- fit:
+--   sequence  memorise + repeat a node pattern   (Simon-says grid)
+--   pins      rotate the part and seat it in the socket window (timing)
+--   latch     clip the two DIMM latches in rhythm (two-stage timing)
+--   cables    match each power lead to its socket  (wiring)
+--   sweep     the classic "strike inside the moving zone" timing bar
+--
+-- Server-authority note: installing a part you own into a rig you own isn't an
+-- economy exploit the way stealing is, so these assembly minigames are
+-- resolved client-side (skipping one just installs a part you already paid
+-- for). The SERVER still enforces everything that matters: you own the rig,
+-- you're next to it, you own the item, the category slot is empty, and the
+-- dependency order (a board before anything mounts on it). The theft hack
+-- stays fully server-validated (server/theft.lua).
+--
+-- Each tier entry maps to a non-? ox_inventory item (see
+-- docs/items/ox_inventory.txt). Add tiers freely; `item` must be unique.
+
+Config.ComponentOrder = { 'motherboard', 'cpu', 'ram', 'psu', 'cooling' }
+
+Config.Components = {
+    motherboard = {
+        label = 'Motherboard',
+        required = true,          -- rig can't run without it; GPUs mount on it
+        minigame = 'sequence',    -- memorise the standoff pattern
+        tiers = {
+            mobo_std = { item = 'comp_motherboard', label = 'ATX Motherboard' },
+        },
+    },
+
+    cpu = {
+        label = 'CPU',
+        required = true,
+        minigame = 'pins',        -- align the pins and seat it in the socket
+        tiers = {
+            -- hashrateBonus: flat hashrate added to the rig on top of the GPUs.
+            cpu_std = { item = 'comp_cpu', label = 'Mining CPU', hashrateBonus = 6 },
+        },
+    },
+
+    ram = {
+        label = 'RAM',
+        required = true,
+        minigame = 'latch',       -- clip both DIMM latches
+        tiers = {
+            -- efficiency: multiplier on total hashrate (1.0 = none).
+            ram_std = { item = 'comp_ram', label = '16GB RAM', efficiency = 1.08 },
+        },
+    },
+
+    psu = {
+        label = 'PSU',
+        required = true,
+        minigame = 'cables',      -- route the power leads to the right sockets
+        tiers = {
+            -- wattage is shown in the UI as the rig's power-delivery headroom;
+            -- informational in v1 (no hard throttle), tune/enforce as you like.
+            psu_std = { item = 'comp_psu', label = '850W PSU', wattage = 850 },
+        },
+    },
+
+    cooling = {
+        label = 'Cooling',
+        required = false,         -- optional; raises cooling capacity (less heat)
+        minigame = 'sweep',       -- balance the fan on the mount
+        tiers = {
+            -- coolingBonus adds to the chassis's baseCoolingCapacity in the
+            -- heat sim (server/rig_state.lua).
+            fan_std = { item = 'comp_fan', label = 'Cooling Fan', coolingBonus = 250 },
+        },
+    },
 }
 
 -- =========================================================================
@@ -90,17 +179,83 @@ Config.Skill = {
 -- =========================================================================
 -- RIG MODELS (the placeable chassis)
 -- =========================================================================
--- `model` is a placeholder GTA prop (a server rack crate) so this runs out
--- of the box -- swap it for your own streamed model once you have one, no
--- other code needs to change. `maxSlots` caps how many GPUs a chassis holds.
+-- Each chassis class is a distinct, placeable ox_inventory item (see
+-- docs/items/ox_inventory.txt for the four item blocks to paste in) with its
+-- own realistic profile. `model` is a base-game prop so this runs out of the
+-- box -- swap it for your own streamed model once you have one, nothing else
+-- needs to change. Fields:
+--
+--   item                ox_inventory item that places this chassis
+--   label               shown in the dashboard + placement menu
+--   model               world prop (a hash) used for the placed object + ghost
+--   maxSlots            how many GPUs this chassis physically holds
+--   price               flavor/reference price (placement consumes the item)
+--   minGpuRank/maxGpuRank  the Config.GpuTiers `rank` window this chassis
+--                       accepts -- the server rejects installing/buying a GPU
+--                       outside it (server/rig_state.lua's GpuFitsChassis), so
+--                       a desktop can't seat an enterprise card and a data
+--                       centre isn't wasted on entry silicon. This is the
+--                       "max and min GPU per model" rule.
+--   baseCoolingCapacity bigger chassis dissipate more heat -- feeds the heat
+--                       equilibrium in server/rig_state.lua (falls back to
+--                       Config.Heat.baseCoolingCapacity if omitted). Higher =
+--                       cooler at the same wattage.
+--
+-- NOTE: the `standard` key is kept (it's what existing placed rigs store in
+-- the DB as rig_model) so this is backward compatible -- don't rename it.
+-- Ranks 1-20 map to the ANX line tier01..tier20 above.
 
 Config.RigModels = {
+    -- Entry tier: a desktop tower. Cheap, two slots, air-cooled, only takes
+    -- the low end of the GPU line.
+    desktop_pc = {
+        item = 'mining_pc_desktop',
+        label = 'Desktop PC',
+        model = `prop_pc_01a`,
+        maxSlots = 2,
+        price = 8000,
+        minGpuRank = 1,
+        maxGpuRank = 7,
+        baseCoolingCapacity = 200,
+    },
+
+    -- The original chassis (open-frame mining rig). Kept under the `standard`
+    -- key for DB backward compatibility; mid slot count, mid cooling.
     standard = {
         item = 'mining_rig_chassis',
         label = 'Mining Rig',
         model = `prop_pc_02a`, -- real basegame PC tower (silver, blue LED) -- swap for your own prop if you want a different look
         maxSlots = 4,
         price = 12000,
+        minGpuRank = 3,
+        maxGpuRank = 12,
+        baseCoolingCapacity = 300,
+    },
+
+    -- Rack-mounted server: more slots, far better cooling, takes the upper-mid
+    -- of the line. Needs a serious spot to run.
+    server_rack = {
+        item = 'mining_server_rack',
+        label = 'Server Rack',
+        model = `prop_server01`,
+        maxSlots = 8,
+        price = 45000,
+        minGpuRank = 8,
+        maxGpuRank = 16,
+        baseCoolingCapacity = 650,
+    },
+
+    -- Data-centre node: top-end. Most slots, industrial cooling, only the
+    -- flagship GPUs. The endgame chassis.
+    data_center = {
+        item = 'mining_datacenter_node',
+        label = 'Data Center Node',
+        model = `prop_server01`, -- reuse the rack prop out of the box; swap for a streamed rack/cabinet
+        maxSlots = 12,
+        price = 120000,
+        minGpuRank = 12,
+        maxGpuRank = 20,
+        baseCoolingCapacity = 1100,
     },
 }
 

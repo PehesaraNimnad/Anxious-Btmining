@@ -75,8 +75,12 @@ lib.callback.register('anxious_btcmining:server:grantAccess', function(source, r
 
     local citizenid = GetCitizenId(source)
     if not citizenid or rig.citizenid ~= citizenid then return false, 'Only the owner can manage access' end
+    if not GuardRigAction(source, rig, 'grantAccess') then return false end
 
-    if type(targetCitizenid) ~= 'string' or targetCitizenid == '' then return false end
+    if type(targetCitizenid) ~= 'string' or targetCitizenid == '' then
+        FlagExploit(source, 'bad-args', 'grantAccess')
+        return false
+    end
     if targetCitizenid == rig.citizenid then return false, 'You already own this rig' end
 
     for _, granted in ipairs(rig.shared_access) do
@@ -87,7 +91,12 @@ lib.callback.register('anxious_btcmining:server:grantAccess', function(source, r
         return false, ('You can only share this rig with %d people'):format(MAX_SHARED)
     end
 
-    if not resolveName(targetCitizenid) then
+    -- Resolve the name once and reuse it -- resolveName hits GetOfflinePlayer
+    -- (a DB lookup) for offline targets, and the Log() call below would
+    -- otherwise run it a second time on every grant even with logging off,
+    -- since Lua builds the argument table before Log can short-circuit.
+    local targetName = resolveName(targetCitizenid)
+    if not targetName then
         return false, 'No character found for that citizen ID'
     end
 
@@ -98,6 +107,16 @@ lib.callback.register('anxious_btcmining:server:grantAccess', function(source, r
     if targetPlayer then
         exports.qbx_core:Notify(targetPlayer.PlayerData.source, 'You were given access to a mining rig', 'success')
     end
+
+    Log('access', {
+        title = 'Rig Access Granted',
+        severity = 'info',
+        fields = {
+            { name = 'Owner', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+            { name = 'Rig', value = ('#%d'):format(rigId), inline = true },
+            { name = 'Granted to', value = ('%s (%s)'):format(targetName, targetCitizenid), inline = true },
+        },
+    })
 
     return true
 end)
@@ -111,11 +130,23 @@ lib.callback.register('anxious_btcmining:server:revokeAccess', function(source, 
 
     local citizenid = GetCitizenId(source)
     if not citizenid or rig.citizenid ~= citizenid then return false, 'Only the owner can manage access' end
+    if not GuardRigAction(source, rig, 'revokeAccess') then return false end
 
     for i, granted in ipairs(rig.shared_access) do
         if granted == targetCitizenid then
             table.remove(rig.shared_access, i)
             MarkDirty(rigId)
+
+            Log('access', {
+                title = 'Rig Access Revoked',
+                severity = 'info',
+                fields = {
+                    { name = 'Owner', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+                    { name = 'Rig', value = ('#%d'):format(rigId), inline = true },
+                    { name = 'Revoked from', value = ('%s (%s)'):format(resolveName(targetCitizenid) or '?', targetCitizenid), inline = true },
+                },
+            })
+
             return true
         end
     end

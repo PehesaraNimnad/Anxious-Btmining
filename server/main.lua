@@ -25,6 +25,10 @@ local function decodeRow(row)
         xp = row.xp,
         level = row.level,
         shared_access = row.shared_access and json.decode(row.shared_access) or {},
+        -- nil for legacy rigs placed before the assembly system -- those are
+        -- grandfathered as already-assembled (see RigIsAssembled). A JSON
+        -- 'null' decodes to nil too, which is the same case.
+        components = row.components and json.decode(row.components) or nil,
     }
 end
 
@@ -57,17 +61,26 @@ function CreateRig(citizenid, rigModel, coords, heading)
         slots[i] = false
     end
 
+    -- A freshly placed rig is an empty shell -- every component slot starts
+    -- unfilled, so the owner has to assemble it (motherboard/CPU/RAM/PSU) before
+    -- it will mine. Built from Config.ComponentOrder so adding a category there
+    -- automatically gives new rigs that slot.
+    local components = {}
+    for _, category in ipairs(Config.ComponentOrder) do
+        components[category] = false
+    end
+
     local status = { damaged = false, onFire = false, seized = false }
     local now = os.time()
 
     local id = MySQL.insert.await([[
         INSERT INTO `mining_rigs`
-            (`citizenid`, `rig_model`, `coords`, `heading`, `slots`, `heat`, `power_state`, `banked_micro_btc`, `uptime_seconds`, `last_tick`, `status`)
-        VALUES (?, ?, ?, ?, ?, 0, 1, 0, 0, ?, ?)
+            (`citizenid`, `rig_model`, `coords`, `heading`, `slots`, `heat`, `power_state`, `banked_micro_btc`, `uptime_seconds`, `last_tick`, `status`, `components`)
+        VALUES (?, ?, ?, ?, ?, 0, 1, 0, 0, ?, ?, ?)
     ]], {
         citizenid, rigModel,
         json.encode({ x = coords.x, y = coords.y, z = coords.z }), heading,
-        json.encode(slots), now, json.encode(status),
+        json.encode(slots), now, json.encode(status), json.encode(components),
     })
 
     if not id then return nil end
@@ -88,6 +101,7 @@ function CreateRig(citizenid, rigModel, coords, heading)
         xp = 0,
         level = 1,
         shared_access = {},
+        components = components,
     }
 
     return id

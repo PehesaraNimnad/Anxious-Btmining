@@ -16,6 +16,7 @@
 ---@field last_tick integer -- os.time()
 ---@field status table -- { damaged: boolean, onFire: boolean, seized: boolean }
 ---@field shared_access string[] -- citizenids granted the same dashboard access as the owner
+---@field components table? -- { [category] = { key: string } | false }, or nil for a legacy (grandfathered) rig
 
 Rigs = {} ---@type table<integer, MiningRig>
 
@@ -62,6 +63,8 @@ local function encodeRig(rig)
         slots = json.encode(rig.slots),
         status = json.encode(rig.status),
         shared_access = json.encode(rig.shared_access),
+        -- nil (legacy) encodes to JSON null and stays grandfathered on reload.
+        components = json.encode(rig.components),
     }
 end
 
@@ -84,12 +87,12 @@ function FlushDirty()
                 UPDATE `mining_rigs` SET
                     `heading` = ?, `heat` = ?, `power_state` = ?, `banked_micro_btc` = ?,
                     `uptime_seconds` = ?, `last_tick` = ?, `coords` = ?, `slots` = ?, `status` = ?,
-                    `xp` = ?, `level` = ?, `shared_access` = ?
+                    `xp` = ?, `level` = ?, `shared_access` = ?, `components` = ?
                 WHERE `id` = ?
             ]], {
                 rig.heading, rig.heat, rig.power_state and 1 or 0, rig.banked_micro_btc,
                 rig.uptime_seconds, rig.last_tick, encoded.coords, encoded.slots, encoded.status,
-                rig.xp, rig.level, encoded.shared_access,
+                rig.xp, rig.level, encoded.shared_access, encoded.components,
                 id,
             })
         end
@@ -100,6 +103,86 @@ end
 ---@return table?
 function GetGpuTier(tierKey)
     return tierKey and Config.GpuTiers[tierKey] or nil
+end
+
+-- Does a given GPU tier fit this rig's chassis? Enforced server-side on both
+-- install and purchase (callbacks.lua / skill.lua) so a crafted request can't
+-- seat an enterprise card in a desktop. A chassis with no min/max window
+-- defined accepts anything (backward compatible with custom models that don't
+-- set the fields).
+---@param rig MiningRig
+---@param tierKey string
+---@return boolean
+function GpuFitsChassis(rig, tierKey)
+    local tier = Config.GpuTiers[tierKey]
+    if not tier then return false end -- not a real GPU tier
+
+    -- Unknown chassis model (a legacy/custom rig_model no longer in config)
+    -- accepts anything -- this matches what toClientRig tells the client
+    -- (min 1 / max 999) so the UI and the server agree, and keeps old rigs
+    -- usable rather than silently un-upgradeable.
+    local model = Config.RigModels[rig.rig_model]
+    if not model then return true end
+
+    local rank = tier.rank or 1
+    local min = model.minGpuRank or 1
+    local max = model.maxGpuRank or math.huge
+    return rank >= min and rank <= max
+end
+
+-- -------------------------------------------------------------------------
+-- Build components / assembly
+-- -------------------------------------------------------------------------
+
+-- Resolve an installed component slot to its config tier definition.
+---@param rig MiningRig
+---@param category string
+---@return table? def, string? key
+function GetRigComponent(rig, category)
+    if not rig.components then return nil end
+    local installed = rig.components[category]
+    if not installed or not installed.key then return nil end
+    local cat = Config.Components[category]
+    local def = cat and cat.tiers and cat.tiers[installed.key]
+    return def, installed.key
+end
+
+-- Is this rig assembled enough to run? True when every `required` component
+-- category has a part installed. A legacy rig (components == nil) is
+-- grandfathered as assembled so pre-existing rigs keep working untouched.
+---@param rig MiningRig
+---@return boolean
+function RigIsAssembled(rig)
+    if not rig.components then return true end -- legacy / grandfathered
+
+    for category, cat in pairs(Config.Components) do
+        if cat.required then
+            local installed = rig.components[category]
+            if not installed or not installed.key then
+                return false
+            end
+        end
+    end
+    return true
+end
+
+-- Which required categories are still missing -- used to tell the player (and
+-- Discord logs) exactly what's blocking the rig from running.
+---@param rig MiningRig
+---@return string[]
+function RigMissingComponents(rig)
+    local missing = {}
+    if not rig.components then return missing end
+    for _, category in ipairs(Config.ComponentOrder) do
+        local cat = Config.Components[category]
+        if cat and cat.required then
+            local installed = rig.components[category]
+            if not installed or not installed.key then
+                missing[#missing + 1] = category
+            end
+        end
+    end
+    return missing
 end
 
 local function occupiedSlots(rig)
@@ -161,26 +244,41 @@ local function advanceRig(rig, now)
     -- server outage can't accrue unlimited BTC.
     local cappedElapsed = math.min(elapsed, Config.MaxOfflineAccrualHours * 3600)
 
+    -- A rig only actually runs (makes heat, mines, risks damage) when it's
+    -- powered on AND fully assembled. A half-built rig just sits there and
+    -- cools, same as a shut-down one -- the mining gate the assembly system
+    -- hangs off.
+    local running = rig.power_state and RigIsAssembled(rig)
+
     local draw = totalPowerDraw(rig)
-    local coolingCapacity = Config.Heat.baseCoolingCapacity
+    -- Bigger chassis dissipate more heat: a data-centre node at the same
+    -- wattage runs far cooler than a desktop. Falls back to the global passive
+    -- cooling for any model that doesn't define its own capacity. An installed
+    -- cooling component adds its coolingBonus on top.
+    local model = Config.RigModels[rig.rig_model]
+    local coolingCapacity = (model and model.baseCoolingCapacity) or Config.Heat.baseCoolingCapacity
+    local coolingDef = GetRigComponent(rig, 'cooling')
+    if coolingDef and coolingDef.coolingBonus then
+        coolingCapacity = coolingCapacity + coolingDef.coolingBonus
+    end
     local equilibrium = math.min(100, (draw / coolingCapacity) * Config.Heat.heatFactor)
 
-    if rig.power_state then
+    if running then
         rig.heat = rig.heat + (equilibrium - rig.heat) * Config.Heat.changeRate
     else
-        -- No new heat generated while shut down -- just cools toward zero.
+        -- No new heat generated while shut down or half-built -- cools to zero.
         rig.heat = rig.heat + (0 - rig.heat) * Config.Heat.changeRate
     end
     rig.heat = math.max(0, math.min(100, rig.heat))
 
-    if rig.power_state and rig.heat >= Config.Heat.criticalPct then
+    if running and rig.heat >= Config.Heat.criticalPct then
         if math.random() < Config.Heat.damageChancePerTick then
             local dmg = math.random(Config.Heat.damageAmount.min, Config.Heat.damageAmount.max)
             damageRandomGpu(rig, dmg)
         end
     end
 
-    if rig.power_state and rig.heat >= Config.Heat.meltdownPct then
+    if running and rig.heat >= Config.Heat.meltdownPct then
         if not rig.status.onFire and math.random() < Config.Heat.fireChancePerTick then
             rig.status.onFire = true
             rig.power_state = false
@@ -198,13 +296,30 @@ local function advanceRig(rig, now)
         end
     end
 
-    if rig.power_state then
+    if running then
         local hashrate = 0
         for _, entry in ipairs(occupiedSlots(rig)) do
             if entry.def then
                 hashrate += entry.def.hashrate
             end
         end
+
+        -- CPU adds a flat hashrate bump; this only matters once there's at
+        -- least one GPU producing, so it's added before the heat/RAM scaling
+        -- rather than being free hashrate on an empty board.
+        if hashrate > 0 then
+            local cpuDef = GetRigComponent(rig, 'cpu')
+            if cpuDef and cpuDef.hashrateBonus then
+                hashrate += cpuDef.hashrateBonus
+            end
+
+            -- RAM efficiency multiplier (1.0 = none).
+            local ramDef = GetRigComponent(rig, 'ram')
+            if ramDef and ramDef.efficiency then
+                hashrate *= ramDef.efficiency
+            end
+        end
+
         hashrate *= heatEfficiency(rig.heat)
 
         if hashrate > 0 then

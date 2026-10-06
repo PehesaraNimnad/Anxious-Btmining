@@ -7,11 +7,24 @@ type Phase = 'watch' | 'input';
 // "Firewall Breach" -- watch a flashing sequence of grid cells, then repeat
 // it back in order. One wrong cell fails immediately, matching the
 // no-second-chances feel of tripping a real intrusion-detection system.
-export function SequenceGame({ difficulty, onResult }: { difficulty: SequenceDifficulty; onResult: (success: boolean) => void }) {
+export function SequenceGame({
+  difficulty,
+  onResult,
+}: {
+  difficulty: SequenceDifficulty;
+  onResult: (success: boolean, input: number[]) => void;
+}) {
   const { gridSize, length, showDelayMs, inputTimeoutMs } = difficulty;
   const cols = Math.round(Math.sqrt(gridSize));
 
-  const sequence = useRef<number[]>(buildSequence(gridSize, length));
+  // Use the server-provided sequence when present (the real game path); only
+  // self-generate for standalone browser preview where there is no server.
+  const sequence = useRef<number[]>(
+    difficulty.sequence && difficulty.sequence.length > 0 ? difficulty.sequence : buildSequence(gridSize, length),
+  );
+  // Every cell the player clicks, in order -- echoed to the server so it can
+  // validate the attempt against its own stored sequence.
+  const inputRef = useRef<number[]>([]);
   const [phase, setPhase] = useState<Phase>('watch');
   const [activeCell, setActiveCell] = useState<number | null>(null);
   const [progress, setProgress] = useState(0);
@@ -22,7 +35,7 @@ export function SequenceGame({ difficulty, onResult }: { difficulty: SequenceDif
   const finish = (success: boolean) => {
     if (doneRef.current) return;
     doneRef.current = true;
-    onResult(success);
+    onResult(success, inputRef.current);
   };
 
   // Playback phase: flash each cell in the sequence in order, then hand off
@@ -81,6 +94,7 @@ export function SequenceGame({ difficulty, onResult }: { difficulty: SequenceDif
 
     const expected = sequence.current[progress];
     const ok = index === expected;
+    inputRef.current.push(index);
     setFlashCell({ index, ok });
     setTimeout(() => setFlashCell(null), 120);
 

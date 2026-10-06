@@ -7,6 +7,19 @@ local function toClientRig(rig, viewerCitizenid)
         id = rig.id,
         rig_model = rig.rig_model,
         maxSlots = model and model.maxSlots or #rig.slots,
+        -- Chassis identity + the GPU-rank window it accepts, so the dashboard
+        -- can show "Desktop PC -- accepts ANX-100 to ANX-500" and grey out
+        -- GPUs that won't fit. Purely informational on the client; the server
+        -- re-checks GpuFitsChassis on every install/buy regardless.
+        chassisLabel = model and model.label or rig.rig_model,
+        minGpuRank = model and model.minGpuRank or 1,
+        maxGpuRank = model and model.maxGpuRank or 999,
+        -- Assembly state for the Assembly tab: the installed components (nil for
+        -- a grandfathered legacy rig), whether it's build-complete, and which
+        -- required categories are still missing.
+        components = rig.components,
+        assembled = RigIsAssembled(rig),
+        missingComponents = RigMissingComponents(rig),
         coords = rig.coords,
         heading = rig.heading,
         slots = rig.slots,
@@ -77,6 +90,16 @@ end)
 lib.callback.register('anxious_btcmining:server:installGpu', function(source, rigId, rigSlot, inventorySlot)
     local rig = GetRig(rigId)
     if not hasAccess(source, rig) then return false end
+    if not GuardRigAction(source, rig, 'installGpu') then return false end
+    if type(rigSlot) ~= 'number' or type(inventorySlot) ~= 'number' then
+        FlagExploit(source, 'bad-args', 'installGpu')
+        return false
+    end
+    -- GPUs mount on the motherboard -- there has to be one in the rig first.
+    -- (A legacy rig has components == nil and is exempt.)
+    if rig.components and not (rig.components.motherboard and rig.components.motherboard.key) then
+        return false, 'Install a motherboard before adding GPUs'
+    end
     if rig.slots[rigSlot] == nil then return false end -- out of range for this chassis
     if rig.slots[rigSlot] ~= false then return false, 'That slot is already occupied' end
 
@@ -92,6 +115,13 @@ lib.callback.register('anxious_btcmining:server:installGpu', function(source, ri
     end
     if not tierKey then return false, 'Not a GPU' end
 
+    -- The chassis only accepts GPUs inside its rank window (config.lua's
+    -- Config.RigModels min/maxGpuRank). Re-checked here even though the UI
+    -- greys out incompatible cards -- the UI is a convenience, this is the gate.
+    if not GpuFitsChassis(rig, tierKey) then
+        return false, 'That GPU doesn\'t fit this chassis'
+    end
+
     local durability = itemSlot.metadata?.durability or Config.GpuTiers[tierKey].maxCondition
 
     local removed = exports.ox_inventory:RemoveItem(source, itemSlot.name, 1, itemSlot.metadata, inventorySlot)
@@ -99,6 +129,16 @@ lib.callback.register('anxious_btcmining:server:installGpu', function(source, ri
 
     rig.slots[rigSlot] = { tier = tierKey, durability = durability }
     MarkDirty(rigId)
+
+    Log('hardware', {
+        title = 'GPU Installed',
+        severity = 'info',
+        fields = {
+            { name = 'Player', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+            { name = 'Rig', value = ('#%d slot %d'):format(rigId, rigSlot), inline = true },
+            { name = 'GPU', value = ('%s (%.0f%%)'):format(Config.GpuTiers[tierKey].label, durability), inline = true },
+        },
+    })
 
     return true, toClientRig(rig, GetCitizenId(source))
 end)
@@ -109,6 +149,11 @@ end)
 lib.callback.register('anxious_btcmining:server:removeGpu', function(source, rigId, rigSlot)
     local rig = GetRig(rigId)
     if not hasAccess(source, rig) then return false end
+    if not GuardRigAction(source, rig, 'removeGpu') then return false end
+    if type(rigSlot) ~= 'number' then
+        FlagExploit(source, 'bad-args', 'removeGpu')
+        return false
+    end
 
     local slot = rig.slots[rigSlot]
     if not slot or not slot.tier then return false, 'That slot is empty' end
@@ -122,6 +167,16 @@ lib.callback.register('anxious_btcmining:server:removeGpu', function(source, rig
     rig.slots[rigSlot] = false
     MarkDirty(rigId)
 
+    Log('hardware', {
+        title = 'GPU Removed',
+        severity = 'info',
+        fields = {
+            { name = 'Player', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+            { name = 'Rig', value = ('#%d slot %d'):format(rigId, rigSlot), inline = true },
+            { name = 'GPU', value = ('%s (%.0f%%)'):format(tier.label, slot.durability), inline = true },
+        },
+    })
+
     return true, toClientRig(rig, GetCitizenId(source))
 end)
 
@@ -130,6 +185,7 @@ end)
 lib.callback.register('anxious_btcmining:server:collectBtc', function(source, rigId)
     local rig = GetRig(rigId)
     if not hasAccess(source, rig) then return false end
+    if not GuardRigAction(source, rig, 'collectBtc') then return false end
 
     local wholeItems = math.floor(rig.banked_micro_btc / Config.MicroBtcPerItem)
     if wholeItems < 1 then return false, 'Nothing to collect yet' end
@@ -150,6 +206,16 @@ lib.callback.register('anxious_btcmining:server:collectBtc', function(source, ri
         end
     end
 
+    Log('mining', {
+        title = 'BTC Collected',
+        severity = 'success',
+        fields = {
+            { name = 'Player', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+            { name = 'Rig', value = ('#%d'):format(rigId), inline = true },
+            { name = 'Amount', value = ('%d BTC'):format(wholeItems), inline = true },
+        },
+    })
+
     return true, wholeItems
 end)
 
@@ -158,7 +224,14 @@ end)
 lib.callback.register('anxious_btcmining:server:togglePower', function(source, rigId)
     local rig = GetRig(rigId)
     if not hasAccess(source, rig) then return false end
+    if not GuardRigAction(source, rig, 'togglePower') then return false end
     if rig.status.onFire then return false, 'This rig is on fire' end
+
+    -- Can't power on a half-built rig -- it has to be assembled first. Powering
+    -- OFF is always allowed (e.g. an assembled rig you want to idle).
+    if not rig.power_state and not RigIsAssembled(rig) then
+        return false, 'Finish assembling this rig before powering it on'
+    end
 
     rig.power_state = not rig.power_state
     MarkDirty(rigId)
@@ -169,7 +242,14 @@ end)
 ---@param source number
 ---@param amount integer -- whole `bitcoin` items to sell
 lib.callback.register('anxious_btcmining:server:sellBtc', function(source, amount)
-    if type(amount) ~= 'number' or amount < 1 then return false end
+    if not RateOk(source, 'sellBtc') then return false end
+    -- Client-supplied amount must be a positive whole number. A fractional or
+    -- absurd value is rejected rather than floored/clamped, so a crafted
+    -- payload can't sneak a non-integer item removal past ox_inventory.
+    if type(amount) ~= 'number' or amount ~= math.floor(amount) or amount < 1 then
+        FlagExploit(source, 'bad-args', ('sellBtc amount=%s'):format(tostring(amount)))
+        return false
+    end
 
     local held = exports.ox_inventory:Search(source, 'count', Config.BtcItemName)
     if not held or held < amount then return false, 'You don\'t have that much Bitcoin' end
@@ -177,11 +257,23 @@ lib.callback.register('anxious_btcmining:server:sellBtc', function(source, amoun
     local removed = exports.ox_inventory:RemoveItem(source, Config.BtcItemName, amount)
     if not removed then return false, 'Failed to remove item' end
 
+    -- Price is read from GlobalState server-side at the moment of sale -- the
+    -- client never supplies or influences the price it's paid at.
     local payout = math.floor(amount * GlobalState.btc_price)
     local player = exports.qbx_core:GetPlayer(source)
     if player then
         player.Functions.AddMoney(Config.Currency, payout, 'btc-sale')
     end
+
+    Log('mining', {
+        title = 'BTC Sold',
+        severity = 'success',
+        fields = {
+            { name = 'Player', value = ('%s (%s)'):format(GetPlayerName(source) or '?', source), inline = true },
+            { name = 'Amount', value = ('%d BTC'):format(amount), inline = true },
+            { name = 'Payout', value = ('$%d @ $%d'):format(payout, GlobalState.btc_price), inline = true },
+        },
+    })
 
     return true, payout
 end)

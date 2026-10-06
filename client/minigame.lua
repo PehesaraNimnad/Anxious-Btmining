@@ -10,6 +10,7 @@ local nextRequestId = 0
 ---@param kind 'extinguish'|'hack'
 ---@param difficulty table -- SweepDifficulty or SequenceDifficulty, shape must match `kind`
 ---@return boolean success
+---@return number[]? input -- for 'hack', the cells the player clicked (echoed to the server to validate); nil otherwise
 function RunMinigame(kind, difficulty)
     nextRequestId += 1
     local requestId = nextRequestId
@@ -30,20 +31,23 @@ function RunMinigame(kind, difficulty)
         data = { requestId = requestId, kind = kind, difficulty = difficulty },
     })
 
-    local success = Citizen.Await(p) == true
+    local result = Citizen.Await(p)
 
     if not DashboardOpen then
         SetNuiFocus(false, false)
     end
 
-    return success
+    -- result is { success = boolean, input = number[]? } -- the input array is
+    -- only present for the hack minigame, where the server needs the player's
+    -- actual clicks to validate the attempt itself (it can't trust a boolean).
+    return result.success == true, result.input
 end
 
 RegisterNUICallback('minigameResult', function(data, cb)
     local p = pending[data.requestId]
     if p then
         pending[data.requestId] = nil
-        p:resolve(data.success == true)
+        p:resolve({ success = data.success == true, input = data.input })
     end
     cb(1)
 end)

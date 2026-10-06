@@ -93,6 +93,19 @@ export function GpuTab({ data, onUpdate }: { data: RigData; onUpdate: (patch: Pa
       ? Math.min(100, ((skill.xp - skill.currentLevelXp) / (skill.nextLevelXp - skill.currentLevelXp)) * 100)
       : 100;
 
+  // Chassis GPU-compatibility window (mirrors the server's GpuFitsChassis --
+  // the server re-checks every install/buy, this just greys out what won't fit).
+  const minRank = rig.minGpuRank ?? 1;
+  const maxRank = rig.maxGpuRank ?? 999;
+  const tierList = Object.values(data.gpuTiers);
+  const lowLabel = tierList.filter((t) => t.rank >= minRank).sort((a, b) => a.rank - b.rank)[0]?.label;
+  const highLabel = tierList.filter((t) => t.rank <= maxRank).sort((a, b) => b.rank - a.rank)[0]?.label;
+  const acceptLabel = lowLabel && highLabel ? `${lowLabel} – ${highLabel}` : 'any GPU';
+  const gpuFits = (tierKey: string) => {
+    const r = data.gpuTiers[tierKey]?.rank ?? 1;
+    return r >= minRank && r <= maxRank;
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <div style={panel}>
@@ -111,7 +124,8 @@ export function GpuTab({ data, onUpdate }: { data: RigData; onUpdate: (patch: Pa
 
       <div style={panel}>
         <div style={panelHeader}>
-          <span>Chassis Slots</span>
+          <span>{rig.chassisLabel ?? 'Chassis'} — Slots</span>
+          <span style={{ fontFamily: font.mono, fontSize: 11, color: color.textMuted }}>Accepts {acceptLabel}</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10, padding: 12 }}>
           {rig.slots.map((slot, i) => (
@@ -134,16 +148,20 @@ export function GpuTab({ data, onUpdate }: { data: RigData; onUpdate: (patch: Pa
               <div style={{ fontFamily: font.mono, fontSize: 12, color: color.textDim }}>No spare GPUs in your inventory.</div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {myGpus.map((g) => (
-                  <button
-                    key={g.inventorySlot}
-                    style={button}
-                    disabled={busy}
-                    onClick={() => beginInstall(pickerSlot, g.inventorySlot)}
-                  >
-                    {g.label} -- {g.durability}%
-                  </button>
-                ))}
+                {myGpus.map((g) => {
+                  const fits = gpuFits(g.tier);
+                  return (
+                    <button
+                      key={g.inventorySlot}
+                      style={fits ? button : buttonDisabled}
+                      disabled={busy || !fits}
+                      title={fits ? undefined : `This chassis only accepts ${acceptLabel}`}
+                      onClick={() => beginInstall(pickerSlot, g.inventorySlot)}
+                    >
+                      {g.label} -- {g.durability}%{fits ? '' : ' -- incompatible'}
+                    </button>
+                  );
+                })}
               </div>
             )}
             <button style={{ ...button, marginTop: 8 }} onClick={() => setPickerSlot(null)}>
@@ -171,23 +189,25 @@ export function GpuTab({ data, onUpdate }: { data: RigData; onUpdate: (patch: Pa
                 justifyContent: 'space-between',
                 padding: '10px 12px',
                 borderTop: `1px solid ${color.border}`,
-                opacity: entry.unlocked ? 1 : 0.55,
+                opacity: entry.unlocked && entry.fitsChassis ? 1 : 0.55,
               }}
             >
               <div>
                 <div style={{ fontFamily: font.display, fontSize: 13, fontWeight: 600 }}>{entry.label}</div>
                 <div style={{ fontFamily: font.mono, fontSize: 11, color: color.textMuted }}>
                   {entry.hashrate} H/s -- {entry.powerDraw}W -- {entry.heatPerSecond}/s heat
+                  {entry.fitsChassis ? '' : ' -- does not fit this chassis'}
                 </div>
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <div style={monoValue}>{formatCash(entry.price)}</div>
                 <button
-                  style={!entry.unlocked || busy ? buttonDisabled : buttonPrimary}
-                  disabled={!entry.unlocked || busy}
+                  style={!entry.unlocked || !entry.fitsChassis || busy ? buttonDisabled : buttonPrimary}
+                  disabled={!entry.unlocked || !entry.fitsChassis || busy}
+                  title={entry.fitsChassis ? undefined : `This chassis only accepts ${acceptLabel}`}
                   onClick={() => buy(entry.key)}
                 >
-                  {entry.unlocked ? 'Buy' : `Lvl ${entry.requiredLevel}`}
+                  {!entry.fitsChassis ? 'N/A' : entry.unlocked ? 'Buy' : `Lvl ${entry.requiredLevel}`}
                 </button>
               </div>
             </div>
