@@ -80,12 +80,17 @@ lib.callback.register('anxious_btcmining:server:getGpuShop', function(source, ri
         out[#out + 1] = {
             key = key,
             label = tier.label,
+            rank = tier.rank or 1,
             price = tier.price,
             requiredLevel = tier.requiredLevel,
             hashrate = tier.hashrate,
             powerDraw = tier.powerDraw,
             heatPerSecond = tier.heatPerSecond,
             unlocked = rig.level >= tier.requiredLevel,
+            -- Whether this GPU fits the rig's chassis rank window -- the
+            -- dashboard disables the Buy button for cards that don't fit, and
+            -- buyGpu below enforces the same thing server-side.
+            fitsChassis = GpuFitsChassis(rig, key),
         }
     end
 
@@ -113,6 +118,12 @@ lib.callback.register('anxious_btcmining:server:buyGpu', function(source, rigId,
 
     if rig.level < tier.requiredLevel then
         return false, ('This rig needs to be level %d first'):format(tier.requiredLevel)
+    end
+
+    -- Can't buy a GPU this chassis can't physically run (config.lua's
+    -- Config.RigModels min/maxGpuRank). Same gate as install.
+    if not GpuFitsChassis(rig, tierKey) then
+        return false, 'This chassis can\'t run that GPU'
     end
 
     local player = exports.qbx_core:GetPlayer(source)

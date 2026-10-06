@@ -50,7 +50,7 @@ server derives position, rate, ownership, price and result from its own state.
 ### Physical device & world (spec §6–10, §33–37, §59–61)
 - 🟡 Placeable rig props, distance stream in/out, ox_target interaction — `client/placement.lua`, `client/rig_props.lua`, `client/target.lua`
 - 🟡 Real-time shared device state (heat/fire/power broadcast to nearby players) — `BroadcastRigSummaries`
-- ⬜ Configurable machine **classes** (Desktop/Rig/Server/ASIC/Rack) — today one `Config.RigModels.standard`
+- 🟡 Configurable machine **classes** — four chassis classes (Desktop PC / Mining Rig / Server Rack / Data Center Node) in `Config.RigModels`, each with its own slot count, cooling capacity, and a **min/max GPU-rank window** enforced server-side (`GpuFitsChassis`). ASIC class still ⬜ (needs a separate ASIC-item path, not GPU slots).
 - ⬜ Facilities / racks / multi-device grouping (§32, §33, §59)
 - ⬜ Device status LEDs, physical cable connections (§35, §36)
 

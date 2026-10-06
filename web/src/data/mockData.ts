@@ -4,26 +4,26 @@ import type { GpuTierConfig, RigData } from '../types';
 // kept as one source array here so the mock gpuTiers/shop below can't drift
 // out of sync with each other the way two hand-typed literals would.
 const TIER_SOURCE: (GpuTierConfig & { key: string })[] = [
-  { key: 'tier01', item: 'gpu_tier01', label: 'ANX-100', hashrate: 8, powerDraw: 90, heatPerSecond: 0.6, price: 1800, maxCondition: 100, requiredLevel: 1 },
-  { key: 'tier02', item: 'gpu_tier02', label: 'ANX-150', hashrate: 10, powerDraw: 100, heatPerSecond: 0.7, price: 2200, maxCondition: 100, requiredLevel: 1 },
-  { key: 'tier03', item: 'gpu_tier03', label: 'ANX-200', hashrate: 12, powerDraw: 115, heatPerSecond: 0.8, price: 2700, maxCondition: 100, requiredLevel: 2 },
-  { key: 'tier04', item: 'gpu_tier04', label: 'ANX-250', hashrate: 14, powerDraw: 130, heatPerSecond: 0.85, price: 3300, maxCondition: 100, requiredLevel: 3 },
-  { key: 'tier05', item: 'gpu_tier05', label: 'ANX-300', hashrate: 17, powerDraw: 150, heatPerSecond: 0.95, price: 4000, maxCondition: 100, requiredLevel: 4 },
-  { key: 'tier06', item: 'gpu_tier06', label: 'ANX-400', hashrate: 20, powerDraw: 170, heatPerSecond: 1.05, price: 5000, maxCondition: 100, requiredLevel: 5 },
-  { key: 'tier07', item: 'gpu_tier07', label: 'ANX-500', hashrate: 24, powerDraw: 190, heatPerSecond: 1.2, price: 6100, maxCondition: 100, requiredLevel: 6 },
-  { key: 'tier08', item: 'gpu_tier08', label: 'ANX-600', hashrate: 29, powerDraw: 215, heatPerSecond: 1.3, price: 7500, maxCondition: 100, requiredLevel: 7 },
-  { key: 'tier09', item: 'gpu_tier09', label: 'ANX-700', hashrate: 35, powerDraw: 245, heatPerSecond: 1.45, price: 9100, maxCondition: 100, requiredLevel: 8 },
-  { key: 'tier10', item: 'gpu_tier10', label: 'ANX-800', hashrate: 41, powerDraw: 275, heatPerSecond: 1.6, price: 11200, maxCondition: 100, requiredLevel: 9 },
-  { key: 'tier11', item: 'gpu_tier11', label: 'ANX-900', hashrate: 50, powerDraw: 310, heatPerSecond: 1.8, price: 13700, maxCondition: 100, requiredLevel: 10 },
-  { key: 'tier12', item: 'gpu_tier12', label: 'ANX-1000', hashrate: 60, powerDraw: 350, heatPerSecond: 2.0, price: 16800, maxCondition: 100, requiredLevel: 11 },
-  { key: 'tier13', item: 'gpu_tier13', label: 'ANX-1200', hashrate: 72, powerDraw: 400, heatPerSecond: 2.25, price: 20500, maxCondition: 100, requiredLevel: 13 },
-  { key: 'tier14', item: 'gpu_tier14', label: 'ANX-1400', hashrate: 86, powerDraw: 450, heatPerSecond: 2.5, price: 25200, maxCondition: 100, requiredLevel: 15 },
-  { key: 'tier15', item: 'gpu_tier15', label: 'ANX-1600', hashrate: 103, powerDraw: 510, heatPerSecond: 2.8, price: 30800, maxCondition: 100, requiredLevel: 16 },
-  { key: 'tier16', item: 'gpu_tier16', label: 'ANX-1800', hashrate: 124, powerDraw: 580, heatPerSecond: 3.1, price: 37700, maxCondition: 100, requiredLevel: 18 },
-  { key: 'tier17', item: 'gpu_tier17', label: 'ANX-2000', hashrate: 148, powerDraw: 650, heatPerSecond: 3.5, price: 46200, maxCondition: 100, requiredLevel: 19 },
-  { key: 'tier18', item: 'gpu_tier18', label: 'ANX-2200', hashrate: 178, powerDraw: 740, heatPerSecond: 3.9, price: 56600, maxCondition: 100, requiredLevel: 21 },
-  { key: 'tier19', item: 'gpu_tier19', label: 'ANX-2400', hashrate: 214, powerDraw: 840, heatPerSecond: 4.3, price: 69400, maxCondition: 100, requiredLevel: 23 },
-  { key: 'tier20', item: 'gpu_tier20', label: 'ANX-2600 Ti', hashrate: 256, powerDraw: 950, heatPerSecond: 4.8, price: 85000, maxCondition: 100, requiredLevel: 25 },
+  { key: 'tier01', rank: 1, item: 'gpu_tier01', label: 'ANX-100', hashrate: 8, powerDraw: 90, heatPerSecond: 0.6, price: 1800, maxCondition: 100, requiredLevel: 1 },
+  { key: 'tier02', rank: 2, item: 'gpu_tier02', label: 'ANX-150', hashrate: 10, powerDraw: 100, heatPerSecond: 0.7, price: 2200, maxCondition: 100, requiredLevel: 1 },
+  { key: 'tier03', rank: 3, item: 'gpu_tier03', label: 'ANX-200', hashrate: 12, powerDraw: 115, heatPerSecond: 0.8, price: 2700, maxCondition: 100, requiredLevel: 2 },
+  { key: 'tier04', rank: 4, item: 'gpu_tier04', label: 'ANX-250', hashrate: 14, powerDraw: 130, heatPerSecond: 0.85, price: 3300, maxCondition: 100, requiredLevel: 3 },
+  { key: 'tier05', rank: 5, item: 'gpu_tier05', label: 'ANX-300', hashrate: 17, powerDraw: 150, heatPerSecond: 0.95, price: 4000, maxCondition: 100, requiredLevel: 4 },
+  { key: 'tier06', rank: 6, item: 'gpu_tier06', label: 'ANX-400', hashrate: 20, powerDraw: 170, heatPerSecond: 1.05, price: 5000, maxCondition: 100, requiredLevel: 5 },
+  { key: 'tier07', rank: 7, item: 'gpu_tier07', label: 'ANX-500', hashrate: 24, powerDraw: 190, heatPerSecond: 1.2, price: 6100, maxCondition: 100, requiredLevel: 6 },
+  { key: 'tier08', rank: 8, item: 'gpu_tier08', label: 'ANX-600', hashrate: 29, powerDraw: 215, heatPerSecond: 1.3, price: 7500, maxCondition: 100, requiredLevel: 7 },
+  { key: 'tier09', rank: 9, item: 'gpu_tier09', label: 'ANX-700', hashrate: 35, powerDraw: 245, heatPerSecond: 1.45, price: 9100, maxCondition: 100, requiredLevel: 8 },
+  { key: 'tier10', rank: 10, item: 'gpu_tier10', label: 'ANX-800', hashrate: 41, powerDraw: 275, heatPerSecond: 1.6, price: 11200, maxCondition: 100, requiredLevel: 9 },
+  { key: 'tier11', rank: 11, item: 'gpu_tier11', label: 'ANX-900', hashrate: 50, powerDraw: 310, heatPerSecond: 1.8, price: 13700, maxCondition: 100, requiredLevel: 10 },
+  { key: 'tier12', rank: 12, item: 'gpu_tier12', label: 'ANX-1000', hashrate: 60, powerDraw: 350, heatPerSecond: 2.0, price: 16800, maxCondition: 100, requiredLevel: 11 },
+  { key: 'tier13', rank: 13, item: 'gpu_tier13', label: 'ANX-1200', hashrate: 72, powerDraw: 400, heatPerSecond: 2.25, price: 20500, maxCondition: 100, requiredLevel: 13 },
+  { key: 'tier14', rank: 14, item: 'gpu_tier14', label: 'ANX-1400', hashrate: 86, powerDraw: 450, heatPerSecond: 2.5, price: 25200, maxCondition: 100, requiredLevel: 15 },
+  { key: 'tier15', rank: 15, item: 'gpu_tier15', label: 'ANX-1600', hashrate: 103, powerDraw: 510, heatPerSecond: 2.8, price: 30800, maxCondition: 100, requiredLevel: 16 },
+  { key: 'tier16', rank: 16, item: 'gpu_tier16', label: 'ANX-1800', hashrate: 124, powerDraw: 580, heatPerSecond: 3.1, price: 37700, maxCondition: 100, requiredLevel: 18 },
+  { key: 'tier17', rank: 17, item: 'gpu_tier17', label: 'ANX-2000', hashrate: 148, powerDraw: 650, heatPerSecond: 3.5, price: 46200, maxCondition: 100, requiredLevel: 19 },
+  { key: 'tier18', rank: 18, item: 'gpu_tier18', label: 'ANX-2200', hashrate: 178, powerDraw: 740, heatPerSecond: 3.9, price: 56600, maxCondition: 100, requiredLevel: 21 },
+  { key: 'tier19', rank: 19, item: 'gpu_tier19', label: 'ANX-2400', hashrate: 214, powerDraw: 840, heatPerSecond: 4.3, price: 69400, maxCondition: 100, requiredLevel: 23 },
+  { key: 'tier20', rank: 20, item: 'gpu_tier20', label: 'ANX-2600 Ti', hashrate: 256, powerDraw: 950, heatPerSecond: 4.8, price: 85000, maxCondition: 100, requiredLevel: 25 },
 ];
 
 const MOCK_LEVEL = 9;
@@ -31,10 +31,15 @@ const MOCK_LEVEL = 9;
 const gpuTiers: Record<string, GpuTierConfig> = {};
 for (const { key, ...tier } of TIER_SOURCE) gpuTiers[key] = tier;
 
+// Mock chassis is the 'standard' Mining Rig (accepts GPU ranks 3-12).
+const MOCK_MIN_RANK = 3;
+const MOCK_MAX_RANK = 12;
+
 const shop = TIER_SOURCE.map(({ key, item: _item, maxCondition: _maxCondition, ...rest }) => ({
   key,
   ...rest,
   unlocked: MOCK_LEVEL >= rest.requiredLevel,
+  fitsChassis: rest.rank >= MOCK_MIN_RANK && rest.rank <= MOCK_MAX_RANK,
 }));
 
 // Only used when running in a plain browser (isEnvBrowser()) for local dev
@@ -46,6 +51,9 @@ export const mockRigData: RigData = {
     id: 1,
     rig_model: 'standard',
     maxSlots: 4,
+    chassisLabel: 'Mining Rig',
+    minGpuRank: MOCK_MIN_RANK,
+    maxGpuRank: MOCK_MAX_RANK,
     coords: { x: 120.4, y: -890.2, z: 29.3 },
     heading: 180.0,
     slots: [

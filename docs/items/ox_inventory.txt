@@ -38,16 +38,59 @@
 ['gpu_tier19'] = { label = 'ANX-2400 GPU',    weight = 1760, stack = false, close = true, description = 'One tier from the top of the line.' },
 ['gpu_tier20'] = { label = 'ANX-2600 Ti GPU', weight = 1850, stack = false, close = true, description = 'The absolute ceiling. Maximum hashrate, maximum meltdown risk.' },
 
--- ─── Rig chassis ────────────────────────────────────────────────────────────
--- Placeable -- using this item starts ghost-preview placement, same pattern
--- as any other placeable prop item in this codebase.
+-- ─── Rig chassis (one item per Config.RigModels class) ───────────────────────
+-- Placeable -- using any of these starts ghost-preview placement, same pattern
+-- as any other placeable prop item in this codebase. Each maps to a chassis
+-- class in config.lua's Config.RigModels, and each class only accepts GPUs
+-- inside its rank window (minGpuRank/maxGpuRank):
+--   mining_pc_desktop      Desktop PC        2 slots   ANX-100 .. ANX-500   (rank 1-7)
+--   mining_rig_chassis     Mining Rig        4 slots   ANX-200 .. ANX-1000  (rank 3-12)
+--   mining_server_rack     Server Rack       8 slots   ANX-600 .. ANX-1800  (rank 8-16)
+--   mining_datacenter_node Data Center Node  12 slots  ANX-1000 .. ANX-2600 (rank 12-20)
+
+['mining_pc_desktop'] = {
+    label = 'Desktop PC',
+    weight = 15000,
+    stack = false,
+    close = true,
+    consume = 0,
+    description = 'An entry-level mining desktop. Two GPU slots, air-cooled.',
+    client = {
+        export = 'anxious_btcmining.usePlaceable',
+    },
+},
+
 ['mining_rig_chassis'] = {
     label = 'Mining Rig',
     weight = 25000,
     stack = false,
     close = true,
     consume = 0,
-    description = 'A rig chassis with slots for GPUs. Place it somewhere secure.',
+    description = 'An open-frame mining rig. Four GPU slots. Place it somewhere secure.',
+    client = {
+        export = 'anxious_btcmining.usePlaceable',
+    },
+},
+
+['mining_server_rack'] = {
+    label = 'Server Rack',
+    weight = 60000,
+    stack = false,
+    close = true,
+    consume = 0,
+    description = 'A rack-mounted mining server. Eight GPU slots, strong cooling.',
+    client = {
+        export = 'anxious_btcmining.usePlaceable',
+    },
+},
+
+['mining_datacenter_node'] = {
+    label = 'Data Center Node',
+    weight = 90000,
+    stack = false,
+    close = true,
+    consume = 0,
+    description = 'A full data-centre mining cabinet. Twelve GPU slots, industrial cooling.',
     client = {
         export = 'anxious_btcmining.usePlaceable',
     },

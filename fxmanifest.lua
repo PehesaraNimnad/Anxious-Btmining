@@ -29,6 +29,11 @@ client_scripts {
 
 server_scripts {
     '@oxmysql/lib/MySQL.lua',
+    -- Server-only config (Discord webhook, dispatch wiring, anti-exploit
+    -- thresholds) -- kept out of the shared config.lua so clients can't read
+    -- it. Must load before any server file that captures Config.Security/
+    -- Dispatch/Logs at load time (logs/security/dispatch below).
+    'server/config_server.lua',
     'server/init.lua',
     'server/migrations.lua',
     'server/rig_state.lua',

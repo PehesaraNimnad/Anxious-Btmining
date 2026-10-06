@@ -7,6 +7,13 @@ local function toClientRig(rig, viewerCitizenid)
         id = rig.id,
         rig_model = rig.rig_model,
         maxSlots = model and model.maxSlots or #rig.slots,
+        -- Chassis identity + the GPU-rank window it accepts, so the dashboard
+        -- can show "Desktop PC -- accepts ANX-100 to ANX-500" and grey out
+        -- GPUs that won't fit. Purely informational on the client; the server
+        -- re-checks GpuFitsChassis on every install/buy regardless.
+        chassisLabel = model and model.label or rig.rig_model,
+        minGpuRank = model and model.minGpuRank or 1,
+        maxGpuRank = model and model.maxGpuRank or 999,
         coords = rig.coords,
         heading = rig.heading,
         slots = rig.slots,
@@ -96,6 +103,13 @@ lib.callback.register('anxious_btcmining:server:installGpu', function(source, ri
         end
     end
     if not tierKey then return false, 'Not a GPU' end
+
+    -- The chassis only accepts GPUs inside its rank window (config.lua's
+    -- Config.RigModels min/maxGpuRank). Re-checked here even though the UI
+    -- greys out incompatible cards -- the UI is a convenience, this is the gate.
+    if not GpuFitsChassis(rig, tierKey) then
+        return false, 'That GPU doesn\'t fit this chassis'
+    end
 
     local durability = itemSlot.metadata?.durability or Config.GpuTiers[tierKey].maxCondition
 

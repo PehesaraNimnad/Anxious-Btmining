@@ -15,6 +15,9 @@ export interface Rig {
   id: number;
   rig_model: string;
   maxSlots: number;
+  chassisLabel?: string; // e.g. "Desktop PC" -- shown in the dashboard header
+  minGpuRank?: number; // GPU-rank window this chassis accepts (1-20)
+  maxGpuRank?: number;
   coords: { x: number; y: number; z: number };
   heading: number;
   slots: RigSlotValue[];
@@ -44,12 +47,14 @@ export interface SkillProgress {
 export interface ShopEntry {
   key: string;
   label: string;
+  rank: number; // position on the GPU line (1-20)
   price: number;
   requiredLevel: number;
   hashrate: number;
   powerDraw: number;
   heatPerSecond: number;
-  unlocked: boolean;
+  unlocked: boolean; // rig level >= requiredLevel
+  fitsChassis: boolean; // rank is inside this chassis's accepted window
 }
 
 export interface OwnedGpu {
@@ -62,6 +67,7 @@ export interface OwnedGpu {
 export interface GpuTierConfig {
   item: string;
   label: string;
+  rank: number;
   hashrate: number;
   powerDraw: number;
   heatPerSecond: number;

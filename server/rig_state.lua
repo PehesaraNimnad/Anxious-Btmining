@@ -102,6 +102,25 @@ function GetGpuTier(tierKey)
     return tierKey and Config.GpuTiers[tierKey] or nil
 end
 
+-- Does a given GPU tier fit this rig's chassis? Enforced server-side on both
+-- install and purchase (callbacks.lua / skill.lua) so a crafted request can't
+-- seat an enterprise card in a desktop. A chassis with no min/max window
+-- defined accepts anything (backward compatible with custom models that don't
+-- set the fields).
+---@param rig MiningRig
+---@param tierKey string
+---@return boolean
+function GpuFitsChassis(rig, tierKey)
+    local model = Config.RigModels[rig.rig_model]
+    local tier = Config.GpuTiers[tierKey]
+    if not model or not tier then return false end
+
+    local rank = tier.rank or 1
+    local min = model.minGpuRank or 1
+    local max = model.maxGpuRank or math.huge
+    return rank >= min and rank <= max
+end
+
 local function occupiedSlots(rig)
     local out = {}
     for i, slot in ipairs(rig.slots) do
@@ -162,7 +181,11 @@ local function advanceRig(rig, now)
     local cappedElapsed = math.min(elapsed, Config.MaxOfflineAccrualHours * 3600)
 
     local draw = totalPowerDraw(rig)
-    local coolingCapacity = Config.Heat.baseCoolingCapacity
+    -- Bigger chassis dissipate more heat: a data-centre node at the same
+    -- wattage runs far cooler than a desktop. Falls back to the global passive
+    -- cooling for any model that doesn't define its own capacity.
+    local model = Config.RigModels[rig.rig_model]
+    local coolingCapacity = (model and model.baseCoolingCapacity) or Config.Heat.baseCoolingCapacity
     local equilibrium = math.min(100, (draw / coolingCapacity) * Config.Heat.heatFactor)
 
     if rig.power_state then

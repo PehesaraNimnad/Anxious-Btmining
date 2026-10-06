@@ -42,27 +42,32 @@ Config.MicroBtcPerItem = 1000000
 -- chase. Stats compound roughly geometrically tier-to-tier (~12-25% per
 -- step depending on the stat) rather than a flat curve, so the jump from
 -- a tier01 to a tier20 rig feels dramatic rather than incremental.
+-- `rank` is the 1-20 position on the line, used by Config.RigModels' chassis
+-- compatibility window (minGpuRank/maxGpuRank) -- a chassis only accepts GPUs
+-- whose rank falls inside its window, so a desktop can't run an enterprise
+-- card and a data-centre node isn't wasted on entry-level silicon. Keep rank
+-- contiguous and unique if you add/re-order tiers.
 Config.GpuTiers = {
-    tier01 = { item = 'gpu_tier01', label = 'ANX-100',      hashrate = 8,   powerDraw = 90,  heatPerSecond = 0.60, price = 1800,  maxCondition = 100, requiredLevel = 1 },
-    tier02 = { item = 'gpu_tier02', label = 'ANX-150',      hashrate = 10,  powerDraw = 100, heatPerSecond = 0.70, price = 2200,  maxCondition = 100, requiredLevel = 1 },
-    tier03 = { item = 'gpu_tier03', label = 'ANX-200',      hashrate = 12,  powerDraw = 115, heatPerSecond = 0.80, price = 2700,  maxCondition = 100, requiredLevel = 2 },
-    tier04 = { item = 'gpu_tier04', label = 'ANX-250',      hashrate = 14,  powerDraw = 130, heatPerSecond = 0.85, price = 3300,  maxCondition = 100, requiredLevel = 3 },
-    tier05 = { item = 'gpu_tier05', label = 'ANX-300',      hashrate = 17,  powerDraw = 150, heatPerSecond = 0.95, price = 4000,  maxCondition = 100, requiredLevel = 4 },
-    tier06 = { item = 'gpu_tier06', label = 'ANX-400',      hashrate = 20,  powerDraw = 170, heatPerSecond = 1.05, price = 5000,  maxCondition = 100, requiredLevel = 5 },
-    tier07 = { item = 'gpu_tier07', label = 'ANX-500',      hashrate = 24,  powerDraw = 190, heatPerSecond = 1.20, price = 6100,  maxCondition = 100, requiredLevel = 6 },
-    tier08 = { item = 'gpu_tier08', label = 'ANX-600',      hashrate = 29,  powerDraw = 215, heatPerSecond = 1.30, price = 7500,  maxCondition = 100, requiredLevel = 7 },
-    tier09 = { item = 'gpu_tier09', label = 'ANX-700',      hashrate = 35,  powerDraw = 245, heatPerSecond = 1.45, price = 9100,  maxCondition = 100, requiredLevel = 8 },
-    tier10 = { item = 'gpu_tier10', label = 'ANX-800',      hashrate = 41,  powerDraw = 275, heatPerSecond = 1.60, price = 11200, maxCondition = 100, requiredLevel = 9 },
-    tier11 = { item = 'gpu_tier11', label = 'ANX-900',      hashrate = 50,  powerDraw = 310, heatPerSecond = 1.80, price = 13700, maxCondition = 100, requiredLevel = 10 },
-    tier12 = { item = 'gpu_tier12', label = 'ANX-1000',     hashrate = 60,  powerDraw = 350, heatPerSecond = 2.00, price = 16800, maxCondition = 100, requiredLevel = 11 },
-    tier13 = { item = 'gpu_tier13', label = 'ANX-1200',     hashrate = 72,  powerDraw = 400, heatPerSecond = 2.25, price = 20500, maxCondition = 100, requiredLevel = 13 },
-    tier14 = { item = 'gpu_tier14', label = 'ANX-1400',     hashrate = 86,  powerDraw = 450, heatPerSecond = 2.50, price = 25200, maxCondition = 100, requiredLevel = 15 },
-    tier15 = { item = 'gpu_tier15', label = 'ANX-1600',     hashrate = 103, powerDraw = 510, heatPerSecond = 2.80, price = 30800, maxCondition = 100, requiredLevel = 16 },
-    tier16 = { item = 'gpu_tier16', label = 'ANX-1800',     hashrate = 124, powerDraw = 580, heatPerSecond = 3.10, price = 37700, maxCondition = 100, requiredLevel = 18 },
-    tier17 = { item = 'gpu_tier17', label = 'ANX-2000',     hashrate = 148, powerDraw = 650, heatPerSecond = 3.50, price = 46200, maxCondition = 100, requiredLevel = 19 },
-    tier18 = { item = 'gpu_tier18', label = 'ANX-2200',     hashrate = 178, powerDraw = 740, heatPerSecond = 3.90, price = 56600, maxCondition = 100, requiredLevel = 21 },
-    tier19 = { item = 'gpu_tier19', label = 'ANX-2400',     hashrate = 214, powerDraw = 840, heatPerSecond = 4.30, price = 69400, maxCondition = 100, requiredLevel = 23 },
-    tier20 = { item = 'gpu_tier20', label = 'ANX-2600 Ti',  hashrate = 256, powerDraw = 950, heatPerSecond = 4.80, price = 85000, maxCondition = 100, requiredLevel = 25 },
+    tier01 = { item = 'gpu_tier01', label = 'ANX-100',      rank = 1,  hashrate = 8,   powerDraw = 90,  heatPerSecond = 0.60, price = 1800,  maxCondition = 100, requiredLevel = 1 },
+    tier02 = { item = 'gpu_tier02', label = 'ANX-150',      rank = 2,  hashrate = 10,  powerDraw = 100, heatPerSecond = 0.70, price = 2200,  maxCondition = 100, requiredLevel = 1 },
+    tier03 = { item = 'gpu_tier03', label = 'ANX-200',      rank = 3,  hashrate = 12,  powerDraw = 115, heatPerSecond = 0.80, price = 2700,  maxCondition = 100, requiredLevel = 2 },
+    tier04 = { item = 'gpu_tier04', label = 'ANX-250',      rank = 4,  hashrate = 14,  powerDraw = 130, heatPerSecond = 0.85, price = 3300,  maxCondition = 100, requiredLevel = 3 },
+    tier05 = { item = 'gpu_tier05', label = 'ANX-300',      rank = 5,  hashrate = 17,  powerDraw = 150, heatPerSecond = 0.95, price = 4000,  maxCondition = 100, requiredLevel = 4 },
+    tier06 = { item = 'gpu_tier06', label = 'ANX-400',      rank = 6,  hashrate = 20,  powerDraw = 170, heatPerSecond = 1.05, price = 5000,  maxCondition = 100, requiredLevel = 5 },
+    tier07 = { item = 'gpu_tier07', label = 'ANX-500',      rank = 7,  hashrate = 24,  powerDraw = 190, heatPerSecond = 1.20, price = 6100,  maxCondition = 100, requiredLevel = 6 },
+    tier08 = { item = 'gpu_tier08', label = 'ANX-600',      rank = 8,  hashrate = 29,  powerDraw = 215, heatPerSecond = 1.30, price = 7500,  maxCondition = 100, requiredLevel = 7 },
+    tier09 = { item = 'gpu_tier09', label = 'ANX-700',      rank = 9,  hashrate = 35,  powerDraw = 245, heatPerSecond = 1.45, price = 9100,  maxCondition = 100, requiredLevel = 8 },
+    tier10 = { item = 'gpu_tier10', label = 'ANX-800',      rank = 10, hashrate = 41,  powerDraw = 275, heatPerSecond = 1.60, price = 11200, maxCondition = 100, requiredLevel = 9 },
+    tier11 = { item = 'gpu_tier11', label = 'ANX-900',      rank = 11, hashrate = 50,  powerDraw = 310, heatPerSecond = 1.80, price = 13700, maxCondition = 100, requiredLevel = 10 },
+    tier12 = { item = 'gpu_tier12', label = 'ANX-1000',     rank = 12, hashrate = 60,  powerDraw = 350, heatPerSecond = 2.00, price = 16800, maxCondition = 100, requiredLevel = 11 },
+    tier13 = { item = 'gpu_tier13', label = 'ANX-1200',     rank = 13, hashrate = 72,  powerDraw = 400, heatPerSecond = 2.25, price = 20500, maxCondition = 100, requiredLevel = 13 },
+    tier14 = { item = 'gpu_tier14', label = 'ANX-1400',     rank = 14, hashrate = 86,  powerDraw = 450, heatPerSecond = 2.50, price = 25200, maxCondition = 100, requiredLevel = 15 },
+    tier15 = { item = 'gpu_tier15', label = 'ANX-1600',     rank = 15, hashrate = 103, powerDraw = 510, heatPerSecond = 2.80, price = 30800, maxCondition = 100, requiredLevel = 16 },
+    tier16 = { item = 'gpu_tier16', label = 'ANX-1800',     rank = 16, hashrate = 124, powerDraw = 580, heatPerSecond = 3.10, price = 37700, maxCondition = 100, requiredLevel = 18 },
+    tier17 = { item = 'gpu_tier17', label = 'ANX-2000',     rank = 17, hashrate = 148, powerDraw = 650, heatPerSecond = 3.50, price = 46200, maxCondition = 100, requiredLevel = 19 },
+    tier18 = { item = 'gpu_tier18', label = 'ANX-2200',     rank = 18, hashrate = 178, powerDraw = 740, heatPerSecond = 3.90, price = 56600, maxCondition = 100, requiredLevel = 21 },
+    tier19 = { item = 'gpu_tier19', label = 'ANX-2400',     rank = 19, hashrate = 214, powerDraw = 840, heatPerSecond = 4.30, price = 69400, maxCondition = 100, requiredLevel = 23 },
+    tier20 = { item = 'gpu_tier20', label = 'ANX-2600 Ti',  rank = 20, hashrate = 256, powerDraw = 950, heatPerSecond = 4.80, price = 85000, maxCondition = 100, requiredLevel = 25 },
 }
 
 -- =========================================================================
@@ -90,17 +95,83 @@ Config.Skill = {
 -- =========================================================================
 -- RIG MODELS (the placeable chassis)
 -- =========================================================================
--- `model` is a placeholder GTA prop (a server rack crate) so this runs out
--- of the box -- swap it for your own streamed model once you have one, no
--- other code needs to change. `maxSlots` caps how many GPUs a chassis holds.
+-- Each chassis class is a distinct, placeable ox_inventory item (see
+-- docs/items/ox_inventory.txt for the four item blocks to paste in) with its
+-- own realistic profile. `model` is a base-game prop so this runs out of the
+-- box -- swap it for your own streamed model once you have one, nothing else
+-- needs to change. Fields:
+--
+--   item                ox_inventory item that places this chassis
+--   label               shown in the dashboard + placement menu
+--   model               world prop (a hash) used for the placed object + ghost
+--   maxSlots            how many GPUs this chassis physically holds
+--   price               flavor/reference price (placement consumes the item)
+--   minGpuRank/maxGpuRank  the Config.GpuTiers `rank` window this chassis
+--                       accepts -- the server rejects installing/buying a GPU
+--                       outside it (server/rig_state.lua's GpuFitsChassis), so
+--                       a desktop can't seat an enterprise card and a data
+--                       centre isn't wasted on entry silicon. This is the
+--                       "max and min GPU per model" rule.
+--   baseCoolingCapacity bigger chassis dissipate more heat -- feeds the heat
+--                       equilibrium in server/rig_state.lua (falls back to
+--                       Config.Heat.baseCoolingCapacity if omitted). Higher =
+--                       cooler at the same wattage.
+--
+-- NOTE: the `standard` key is kept (it's what existing placed rigs store in
+-- the DB as rig_model) so this is backward compatible -- don't rename it.
+-- Ranks 1-20 map to the ANX line tier01..tier20 above.
 
 Config.RigModels = {
+    -- Entry tier: a desktop tower. Cheap, two slots, air-cooled, only takes
+    -- the low end of the GPU line.
+    desktop_pc = {
+        item = 'mining_pc_desktop',
+        label = 'Desktop PC',
+        model = `prop_pc_01a`,
+        maxSlots = 2,
+        price = 8000,
+        minGpuRank = 1,
+        maxGpuRank = 7,
+        baseCoolingCapacity = 200,
+    },
+
+    -- The original chassis (open-frame mining rig). Kept under the `standard`
+    -- key for DB backward compatibility; mid slot count, mid cooling.
     standard = {
         item = 'mining_rig_chassis',
         label = 'Mining Rig',
         model = `prop_pc_02a`, -- real basegame PC tower (silver, blue LED) -- swap for your own prop if you want a different look
         maxSlots = 4,
         price = 12000,
+        minGpuRank = 3,
+        maxGpuRank = 12,
+        baseCoolingCapacity = 300,
+    },
+
+    -- Rack-mounted server: more slots, far better cooling, takes the upper-mid
+    -- of the line. Needs a serious spot to run.
+    server_rack = {
+        item = 'mining_server_rack',
+        label = 'Server Rack',
+        model = `prop_server01`,
+        maxSlots = 8,
+        price = 45000,
+        minGpuRank = 8,
+        maxGpuRank = 16,
+        baseCoolingCapacity = 650,
+    },
+
+    -- Data-centre node: top-end. Most slots, industrial cooling, only the
+    -- flagship GPUs. The endgame chassis.
+    data_center = {
+        item = 'mining_datacenter_node',
+        label = 'Data Center Node',
+        model = `prop_server01`, -- reuse the rack prop out of the box; swap for a streamed rack/cabinet
+        maxSlots = 12,
+        price = 120000,
+        minGpuRank = 12,
+        maxGpuRank = 20,
+        baseCoolingCapacity = 1100,
     },
 }
 
@@ -257,150 +328,3 @@ Config.Tick = {
 -- accrual after a server restart or long gap between ticks, so a rig can't
 -- farm unlimited BTC just by having the server offline for a week.
 Config.MaxOfflineAccrualHours = 12
-
--- =========================================================================
--- SECURITY / ANTI-EXPLOIT  (server/security.lua)
--- =========================================================================
--- The whole resource is already server-authoritative -- the client never
--- decides a reward, balance, ownership, price or machine state, it only ever
--- *requests* an action and the server computes the result. This block tightens
--- the two things a raw callback can't infer on its own: WHERE the requester is
--- standing, and HOW OFTEN they're firing a callback. A client that calls a rig
--- action from across the map, or spams one faster than a human can click, is
--- not a legitimate UI -- it's an injected event, so we reject it and (optionally)
--- log/kick it rather than trusting it.
-
-Config.Security = {
-    -- Max distance (metres) a player may be from a rig for ANY rig-scoped
-    -- action (install/remove GPU, collect, toggle power, buy GPU, manage
-    -- access, hack, steal). The server measures the requester's real ped
-    -- position against the rig's stored coords -- a client cannot fake this.
-    maxInteractDistance = 5.0,
-
-    -- Per-action rate limiting. A legitimate dashboard can't physically fire
-    -- these faster than a human clicks; anything faster is a script.
-    rateLimit = {
-        enabled = true,
-        default = 300, -- ms minimum between any two callbacks from one source
-        actions = {    -- per-action overrides (ms), for the expensive/abusable ones
-            sellBtc = 1000,
-            buyGpu = 750,
-            collectBtc = 1000,
-            installGpu = 400,
-            removeGpu = 400,
-            togglePower = 600,
-            grantAccess = 1000,
-            requestHack = 2000,
-        },
-    },
-
-    -- When a request fails a *structural* check that a real client could never
-    -- trip (wrong distance, impossible slot, acting on a rig you can't see,
-    -- spamming past the rate limit), treat it as a probable exploit: count it,
-    -- log it (see Config.Logs.events.exploit) and optionally drop the player.
-    flagExploits = true,
-    kickOnExploitThreshold = false, -- set true to auto-kick repeat offenders
-    exploitThreshold = 12,          -- flagged events from one source before a kick
-    exploitDecayMs = 120000,        -- a source's flag counter resets after this quiet period
-}
-
--- =========================================================================
--- POLICE / DISPATCH  (server/dispatch.lua + client/dispatch.lua)  -- spec §40/§41
--- =========================================================================
--- A framework-agnostic bridge so a data-centre/rig break-in can raise a police
--- alert on whatever dispatch resource a server already runs. 'auto' picks the
--- first provider it can detect; set it explicitly to skip detection. The
--- 'standalone' provider needs no dispatch resource at all -- it notifies every
--- on-duty officer and drops a temporary map blip via client/dispatch.lua.
-
-Config.Dispatch = {
-    enabled = true,
-
-    -- 'auto' | 'ps-dispatch' | 'cd_dispatch' | 'qs-dispatch' | 'core_dispatch'
-    --        | 'linden_outlawalert' | 'standalone' | 'custom'
-    -- 'custom' fires `anxious_btcmining:dispatch:custom` (server event) with the
-    -- alert table so you can route it into any bespoke system -- see the handler
-    -- stub at the bottom of server/dispatch.lua.
-    provider = 'auto',
-
-    -- Job names treated as police for the standalone provider and the
-    -- min-cops gate below. Framework-specific; edit to match your server.
-    policeJobs = { 'police', 'bcso', 'sheriff', 'sast', 'lspd' },
-
-    -- Require at least this many on-duty police online before any alert fires
-    -- (0 = always alert). Stops break-ins being risk-free when no one can
-    -- respond, without baking a specific duty system in -- see IsOnDuty in
-    -- server/dispatch.lua if your framework tracks duty differently.
-    minPoliceOnline = 1,
-
-    -- Default blip used by the standalone provider when an alert omits its own.
-    blip = { sprite = 459, colour = 1, scale = 1.1, lengthSeconds = 90 },
-
-    -- Each break-in event can raise an alert. `chance` (0-1) gates how often it
-    -- actually dispatches, so not every attempt lights up the map. A rig's
-    -- security level (Config.Theft.difficulty) raises the chance -- a hardened
-    -- rig is louder when touched (see server/dispatch.lua).
-    alerts = {
-        hackStarted = {
-            enabled = false, chance = 0.25,
-            code = '10-31', title = 'Suspicious Network Activity',
-            message = 'Possible unauthorised access to a mining rig',
-        },
-        hackFailed = {
-            enabled = true, chance = 0.60,
-            code = '10-90', title = 'Mining Rig Intrusion Alarm',
-            message = 'A failed intrusion tripped a mining rig\'s alarm',
-        },
-        hackSuccess = {
-            enabled = true, chance = 0.40,
-            code = '10-90', title = 'Crypto Theft In Progress',
-            message = 'A mining rig is being drained of Bitcoin',
-        },
-        gpuTheft = {
-            enabled = true, chance = 1.00,
-            code = '10-68', title = 'Hardware Theft',
-            message = 'Someone is physically stripping a mining rig',
-        },
-        unauthorizedAccess = {
-            enabled = true, chance = 0.50,
-            code = '10-31', title = 'Unauthorised Terminal Access',
-            message = 'A mining terminal was opened by a non-owner',
-        },
-    },
-}
-
--- =========================================================================
--- DISCORD LOGS  (server/logs.lua)  -- spec §43
--- =========================================================================
--- Fire-and-forget Discord webhook logging. Off by default (no webhook). Every
--- category can be toggled independently so you can, say, log exploit attempts
--- and theft without the noise of every BTC sale.
-
-Config.Logs = {
-    enabled = false,
-    webhook = '', -- paste a Discord channel webhook URL here to turn logging on
-    botName = 'P7H Crypto',
-    botAvatar = '',
-    footer = 'anxious_btcmining',
-
-    -- Per-category on/off. Categories map to the Log(category, ...) calls
-    -- sprinkled through the server files.
-    events = {
-        mining = false,     -- collect / sell / market payouts
-        hardware = true,    -- GPU install / remove / purchase / destruction
-        theft = true,       -- hack attempts, GPU theft, crypto theft
-        access = true,      -- grant / revoke shared access
-        admin = true,       -- every /btc* admin command
-        exploit = true,     -- anti-exploit flags from server/security.lua
-        power = false,      -- power billing shut-downs, fires
-    },
-
-    -- Embed colours (decimal) per severity -- used by server/logs.lua.
-    colors = {
-        info = 3447003,     -- blue
-        success = 3066993,  -- green
-        warn = 15844367,    -- amber
-        danger = 15158332,  -- red
-        admin = 10181046,   -- purple
-    },
-}
