@@ -182,3 +182,34 @@ export interface MinigameRequest {
   kind: MinigameKind;
   difficulty: MinigameDifficulty;
 }
+
+// --- World screen (the live monitor floating on a rig) --------------------
+
+// Live snapshot pushed from server/display.lua (public, shared screen state).
+export interface RigScreenStat {
+  id: number;
+  label: string;
+  status: string;
+  severity: 'good' | 'warn' | 'danger' | 'idle';
+  online: boolean;
+  assembled: boolean;
+  powered: boolean;
+  legacy: boolean;
+  heat: number;
+  powerKw: number;
+  hashrate: number;
+  btcPerHour: number;
+  gpuTemp: number;
+  cpuTemp: number;
+  usedSlots: number;
+  maxSlots: number;
+  hasCooling: boolean;
+}
+
+// Per-frame placement pushed from client/screen.lua (where to draw each panel).
+export interface RigScreenFrameEntry {
+  id: number;
+  x: number; // 0-1 normalized screen position
+  y: number;
+  scale: number;
+}

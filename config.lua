@@ -329,6 +329,28 @@ Config.Heat = {
     -- server/fire.lua) -- otherwise it just burns until it cools on its own.
     extinguisherItem = 'fire_extinguisher',
     extinguishCooldownMs = 15000, -- retry lockout after a failed attempt
+
+    -- A rig running with NO cooling component installed runs this much hotter
+    -- (fraction added to its heat equilibrium). Makes the optional cooling fan
+    -- matter: skip it and the rig trends toward overheating/fire under load.
+    noCoolingPenaltyPct = 0.20,
+}
+
+-- =========================================================================
+-- WORLD SCREEN  (client/screen.lua + server/display.lua)
+-- =========================================================================
+-- The live "monitor" that appears floating on a rig when you walk up to it,
+-- showing its real state (status, hashrate, power, temperature, usage) the way
+-- a real rig-monitoring display would. It reflects shared server state, so two
+-- players looking at the same rig see the same numbers. Non-interactive -- it
+-- never grabs input, it just renders over the world near the prop.
+
+Config.Screen = {
+    enabled = true,
+    range = 9.0,          -- metres: the screen shows within this distance of the prop
+    heightOffset = 0.45,  -- how far above the prop's origin the screen floats
+    statsIntervalMs = 2000, -- how often the live numbers refresh from the server
+    maxOnScreen = 5,      -- cap simultaneously rendered screens, for perf
 }
 
 -- =========================================================================

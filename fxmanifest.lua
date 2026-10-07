@@ -25,6 +25,7 @@ client_scripts {
     'client/fire.lua',
     'client/dashboard.lua',
     'client/dispatch.lua',
+    'client/screen.lua',
 }
 
 server_scripts {
@@ -52,6 +53,7 @@ server_scripts {
     'server/admin.lua',
     'server/callbacks.lua',
     'server/components.lua',
+    'server/display.lua',
 }
 
 files {

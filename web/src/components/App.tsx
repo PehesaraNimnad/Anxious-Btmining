@@ -7,6 +7,7 @@ import { color, font } from '../theme/tokens';
 import type { MinigameRequest, RigData } from '../types';
 import { Dashboard } from './Dashboard';
 import { MinigameOverlay } from './minigames/MinigameOverlay';
+import { RigScreens } from './screen/RigScreens';
 
 export function App() {
   const [visible, setVisible] = useState(isEnvBrowser());
@@ -63,6 +64,10 @@ export function App() {
         pointerEvents: 'none',
       }}
     >
+      {/* Always-on, click-through live rig monitors (independent of the
+          dashboard being open). */}
+      <RigScreens />
+
       {visible && data && (
         <div style={{ pointerEvents: 'auto' }}>
           <Dashboard data={data} onClose={close} onUpdate={update} />

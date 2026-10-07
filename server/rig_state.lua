@@ -213,6 +213,42 @@ local function heatEfficiency(heat)
     return 1.0 - ((heat - warm) / (meltdown - warm))
 end
 
+-- Current, non-mutating live stats for a rig -- used by the world screen's
+-- display snapshot (server/display.lua). Mirrors the mining math in advanceRig
+-- so the screen shows the same numbers the simulation actually uses: effective
+-- hashrate (after CPU/RAM and heat throttling) and the resulting BTC/hour.
+---@param rig MiningRig
+---@return table { draw, rawHashrate, hashrate, microBtcPerHour }
+function RigLiveStats(rig)
+    local draw = totalPowerDraw(rig)
+
+    local hashrate = 0
+    for _, entry in ipairs(occupiedSlots(rig)) do
+        if entry.def then
+            hashrate = hashrate + entry.def.hashrate
+        end
+    end
+
+    if hashrate > 0 then
+        local cpuDef = GetRigComponent(rig, 'cpu')
+        if cpuDef and cpuDef.hashrateBonus then
+            hashrate = hashrate + cpuDef.hashrateBonus
+        end
+        local ramDef = GetRigComponent(rig, 'ram')
+        if ramDef and ramDef.efficiency then
+            hashrate = hashrate * ramDef.efficiency
+        end
+    end
+
+    local effective = hashrate * heatEfficiency(rig.heat)
+    return {
+        draw = draw,
+        rawHashrate = hashrate,
+        hashrate = effective,
+        microBtcPerHour = effective * Config.Tick.microBtcPerHashPerHour,
+    }
+end
+
 -- Damages (or destroys) a random installed GPU. Returns true if a GPU was
 -- destroyed outright, so callers can decide whether to notify the owner.
 local function damageRandomGpu(rig, amount)
@@ -261,7 +297,13 @@ local function advanceRig(rig, now)
     if coolingDef and coolingDef.coolingBonus then
         coolingCapacity = coolingCapacity + coolingDef.coolingBonus
     end
-    local equilibrium = math.min(100, (draw / coolingCapacity) * Config.Heat.heatFactor)
+    local equilibrium = (draw / coolingCapacity) * Config.Heat.heatFactor
+    -- No cooling fan installed? The rig runs hotter. Only applied to rigs that
+    -- use the assembly system (components ~= nil); legacy rigs are unchanged.
+    if rig.components and not coolingDef and (Config.Heat.noCoolingPenaltyPct or 0) > 0 then
+        equilibrium = equilibrium * (1 + Config.Heat.noCoolingPenaltyPct)
+    end
+    equilibrium = math.min(100, equilibrium)
 
     if running then
         rig.heat = rig.heat + (equilibrium - rig.heat) * Config.Heat.changeRate
